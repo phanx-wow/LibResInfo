@@ -60,6 +60,8 @@ total.pending = total.pending or 0 -- # resses available to take
 
 local resSpells = {
 	2008,   -- Ancestral Spirit (shaman)
+	8342,   -- Defibrillate (item: Goblin Jumper Cables)
+	22999,  -- Defibrillate (item: Goblin Jumper Cables XL)
 	61999,  -- Raise Ally (death knight)
 	20484,  -- Rebirth (druid)
 	7238,   -- Redemption (paladin)
@@ -72,11 +74,7 @@ local resSpells = {
 
 for i = #resSpells, 1, -1 do
 	local id = resSpells[i]
-	local name, _, icon = GetSpellInfo(id)
-	if name then
-		resSpells[id] = name
-		resSpells[name] = id
-	end
+	resSpells[id] = GetSpellInfo(id)
 	resSpells[i] = nil
 end
 
