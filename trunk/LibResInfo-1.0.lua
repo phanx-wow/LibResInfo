@@ -7,13 +7,15 @@ See the accompanying README and LICENSE files for more information.
 Things to do:
 	* Add callbacks (basically done)
 	* Add API functions
+	* Fix handling of people leaving groups during a res
 	* Refactor messy and redundant sections
 
 Things that can't be done:
 	* Know when a pending res is declined manually
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 1
+local DEBUG_LEVEL = 2
+local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
 
@@ -62,6 +64,7 @@ local resSpells = {
 	2008,   -- Ancestral Spirit (shaman)
 	8342,   -- Defibrillate (item: Goblin Jumper Cables)
 	22999,  -- Defibrillate (item: Goblin Jumper Cables XL)
+	54732,  -- Defibrillate (item: Gnomish Army Knife)
 	61999,  -- Raise Ally (death knight)
 	20484,  -- Rebirth (druid)
 	7238,   -- Redemption (paladin)
@@ -116,13 +119,12 @@ local function debug(level, text, ...)
 	if level <= DEBUG_LEVEL then
 		if (...) then
 			if strfind(text, "%%[dfqsx%d%.]") then
-				print("|cff00ddba[LRI]|r", format(text, ...))
+				text = format(text, ...)
 			else
-				print("|cff00ddba[LRI]|r", text, ...)
+				text = strjoin(" ", text, ...)
 			end
-		else
-			print("|cff00ddba[LRI]|r", text)
 		end
+		DEBUG_FRAME:AddMessage("|cff00ddba[LRI]|r " .. text)
 	end
 end
 
