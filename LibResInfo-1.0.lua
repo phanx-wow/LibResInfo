@@ -5,8 +5,6 @@ Copyright (c) 2012 A. Kinley <addons@phanx.net>. All rights reserved.
 See the accompanying README and LICENSE files for more information.
 
 Things to do:
-	* Add callbacks (basically done)
-	* Add API functions
 	* Fix handling of people leaving groups during a res
 	* Refactor messy and redundant sections
 
@@ -30,6 +28,7 @@ lib.callbacks = lib.callbacks or LibStub:GetLibrary("CallbackHandler-1.0"):New(l
 lib.eventFrame = lib.eventFrame or CreateFrame("Frame")
 
 lib.unitFromGUID = lib.unitFromGUID or {}
+lib.guidFromUnit = lib.guidFromUnit or {}
 
 lib.castTarget = lib.castTarget or {}
 lib.castStart = lib.castStart or {}
@@ -46,6 +45,7 @@ local callbacks = lib.callbacks
 local f = lib.eventFrame
 
 local unitFromGUID = lib.unitFromGUID -- guid = unit
+local guidFromUnit = lib.guidFromUnit -- unit = guid
 
 local castTarget = lib.castTarget -- caster guid = target guid
 local castStart = lib.castStart   -- caster guid = cast start time
@@ -61,46 +61,23 @@ total.pending = total.pending or 0 -- # resses available to take
 ------------------------------------------------------------------------
 
 local resSpells = {
-	2008,   -- Ancestral Spirit (shaman)
-	8342,   -- Defibrillate (item: Goblin Jumper Cables)
-	22999,  -- Defibrillate (item: Goblin Jumper Cables XL)
-	54732,  -- Defibrillate (item: Gnomish Army Knife)
-	61999,  -- Raise Ally (death knight)
-	20484,  -- Rebirth (druid)
-	7238,   -- Redemption (paladin)
-	2006,   -- Resurrection (priest)
-	115178, -- Resuscitate (monk)
-	50769,  -- Revive (druid)
-	982,    -- Revive Pet (hunter)
-	20707,  -- Soulstone (warlock)
+	[2008]   = GetSpellInfo(2008),   -- Ancestral Spirit (shaman)
+	[8342]   = GetSpellInfo(8342),   -- Defibrillate (item: Goblin Jumper Cables)
+	[22999]  = GetSpellInfo(22999),  -- Defibrillate (item: Goblin Jumper Cables XL)
+	[54732]  = GetSpellInfo(54732),  -- Defibrillate (item: Gnomish Army Knife)
+	[61999]  = GetSpellInfo(61999),  -- Raise Ally (death knight)
+	[20484]  = GetSpellInfo(20484),  -- Rebirth (druid)
+	[7238]   = GetSpellInfo(7238),   -- Redemption (paladin)
+	[2006]   = GetSpellInfo(2006),   -- Resurrection (priest)
+	[115178] = GetSpellInfo(115178), -- Resuscitate (monk)
+	[50769]  = GetSpellInfo(50769),  -- Revive (druid)
+	[982]    = GetSpellInfo(982),    -- Revive Pet (hunter)
+	[20707]  = GetSpellInfo(20707),  -- Soulstone (warlock)
 }
-
-for i = #resSpells, 1, -1 do
-	local id = resSpells[i]
-	resSpells[id] = GetSpellInfo(id)
-	resSpells[i] = nil
-end
 
 ------------------------------------------------------------------------
 
-local validUnits = {
-	player = true,
-	pet = true,
-}
-
-for i = 1, MAX_PARTY_MEMBERS do
-	validUnits["party"..i] = true
-	validUnits["partypet"..i] = true
-end
-
-for i = 1, MAX_RAID_MEMBERS do
-	validUnits["raid"..i] = true
-	validUnits["raidpet"..i] = true
-end
-
-------------------------------------------------------------------------
-
---f.callbacks = LibStub("CallbackHandler-1.0"):New(f)
+f.callbacks = LibStub("CallbackHandler-1.0"):New(f)
 
 f:SetScript("OnEvent", function(self, event, ...)
 	return self[event] and self[event](self, event, ...)
@@ -118,14 +95,84 @@ f:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
 local function debug(level, text, ...)
 	if level <= DEBUG_LEVEL then
 		if (...) then
-			if strfind(text, "%%[dfqsx%d%.]") then
+			if type(text) == "string" and strfind(text, "%%[dfqsx%d%.]") then
 				text = format(text, ...)
 			else
-				text = strjoin(" ", text, ...)
+				text = strjoin(" ", tostringall(text, ...))
 			end
 		end
 		DEBUG_FRAME:AddMessage("|cff00ddba[LRI]|r " .. text)
 	end
+end
+
+------------------------------------------------------------------------
+
+function lib:UnitHasIncomingRes(unit)
+	debug(1, "UnitHasIncomingRes", unit)
+	local guid
+	if strmatch(unit, "^0x") then
+		guid = unit
+		unit = unitFromGUID[unit]
+	else
+		guid = UnitGUID(unit)
+		unit = unitFromGUID[guid]
+	end
+	if guid and unit then
+		debug(2, unit, guid, (UnitName(unit)))
+		if resPending[guid] then
+			debug(2, true, nil, nil, resPending[guid])
+			return true, nil, nil, resPending[guid]
+		else
+			local single, firstCaster, firstEnd = resIncoming[guid] == 1
+			for casterGUID, targetGUID in pairs(castTarget) do
+				if targetGUID == guid then
+					local endTime = castEnd[casterGUID]
+					if single then
+						debug(2, true, unitFromGUID[casterGUID], casterGUID, endTime)
+						return true, unitFromGUID[casterGUID], casterGUID, endTime
+					elseif not firstEnd or endTime < firstEnd then
+						firstCaster, firstEnd = casterGUID, endTime
+					end
+				end
+			end
+			if firstCaster then
+				debug(2, true, unitFromGUID[firstCaster], firstCaster, firstEnd)
+				return true, unitFromGUID[firstCaster], firstCaster, firstEnd
+			end
+		end
+	end
+	debug(2, "nil")
+end
+
+function lib:UnitIsCastingRes(unit)
+	debug(1, "UnitIsCastingRes", unit)
+	local guid
+	if strmatch(unit, "^0x") then
+		guid = unit
+		unit = unitFromGUID[unit]
+	else
+		guid = UnitGUID(unit)
+		unit = unitFromGUID[guid]
+	end
+	if guid and unit then
+		debug(2, unit, guid, (UnitName(unit)))
+		local isFirst, targetGUID, endTime = true, castTarget[guid], castEnd[guid]
+		if targetGUID then
+			if resPending[targetGUID] then
+				isFirst = nil
+			else
+				for k, v in pairs(castTarget) do
+					if k ~= guid and v == targetGUID and castEnd[k] < endTime then
+						isFirst = nil
+						break
+					end
+				end
+			end
+			debug(2, unitFromGUID[targetGUID], targetGUID, endTime, isFirst)
+			return unitFromGUID[targetGUID], targetGUID, endTime, isFirst
+		end
+	end
+	debug(2, "nil")
 end
 
 ------------------------------------------------------------------------
@@ -135,33 +182,45 @@ function f:GROUP_ROSTER_UPDATE()
 	wipe(unitFromGUID)
 	if IsInRaid() then
 		debug(2, "raid")
-		local guid
+		local unit, guid
 		for i = 1, GetNumGroupMembers() do
-			guid = UnitGUID("raid"..i)
+			unit = "raid"..i
+			guid = UnitGUID(unit)
 			if guid then
-				unitFromGUID[guid] = "raid"..i
+				unitFromGUID[guid] = unit
+				guidFromUnit[unit] = guid
 			end
-			guid = UnitGUID("raidpet"..i)
+			unit = "raidpet"..i
+			guid = UnitGUID(unit)
 			if guid then
-				unitFromGUID[guid] = "raidpet"..i
+				unitFromGUID[guid] = unit
+				guidFromUnit[unit] = guid
 			end
 		end
 	else
-		unitFromGUID[UnitGUID("player")] = "player"
-		local guid = UnitGUID("pet")
+		local unit, guid = "player", UnitGUID("player")
+		unitFromGUID[guid] = unit
+		guidFromUnit[unit] = guid
+
+		unit, guid = "pet", UnitGUID("pet")
 		if guid then
-			unitFromGUID[guid] = "pet"
+			unitFromGUID[guid] = unit
+			guidFromUnit[unit] = guid
 		end
 		if IsInGroup() then
 			debug(2, "party")
 			for i = 1, GetNumGroupMembers() - 1 do
-				guid = UnitGUID("party"..i)
+				unit = "party"..i
+				guid = UnitGUID(unit)
 				if guid then
-					unitFromGUID[guid] = "party"..i
+					unitFromGUID[guid] = unit
+					guidFromUnit[unit] = guid
 				end
-				guid = UnitGUID("partypet"..i)
+				unit = "partypet"..i
+				guid = UnitGUID(unit)
 				if guid then
-					unitFromGUID[guid] = "partypet"..i
+					unitFromGUID[guid] = unit
+					guidFromUnit[unit] = guid
 				end
 			end
 		else
@@ -234,7 +293,7 @@ end
 ------------------------------------------------------------------------
 
 function f:INCOMING_RESURRECT_CHANGED(event, unit)
-	if validUnits[unit] then
+	if guidFromUnit[unit] then
 		local guid = UnitGUID(unit)
 		local name = UnitName(unit)
 		local hasRes = UnitHasIncomingResurrection(unit)
@@ -252,7 +311,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 					end
 					local casterUnit = unitFromGUID[casterGUID]
 					print(">> ResCastStarted", (UnitName(casterUnit)), "=>", name, "ETA", now - startTime, "#", resIncoming[guid])
-					-- callbacks:Fire("LibResInfo_ResCastStarted", casterUnit, casterGUID, unit, guid, now - startTime)
+					callbacks:Fire("LibResInfo_ResCastStarted", casterUnit, casterGUID, unit, guid, now - startTime)
 					found = true
 				end
 			end
@@ -264,7 +323,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 					-- finished casting
 					local casterUnit = unitFromGUID[casterGUID]
 					print(">> ResCastFinished", (UnitName(casterUnit)), "=>", name, "#", resIncoming[guid])
-					-- callbacks:Fire("LibResInfo_ResCastFinished", casterUnit, casterGUID, unit, guid)
+					callbacks:Fire("LibResInfo_ResCastFinished", casterUnit, casterGUID, unit, guid)
 					castTarget[casterGUID], castEnd[casterGUID] = nil, nil
 					local n = total.casting
 					n = n + 1
@@ -296,11 +355,11 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 			if stopped then
 				local casterUnit = unitFromGUID[stopped]
 				print(">> ResCastCancelled", (UnitName(casterUnit)), "=>", name, "#", resIncoming[guid])
-				-- callbacks:Fire("LibResInfo_ResCastCancelled", casterUnit, stopped, unit, guid)
+				callbacks:Fire("LibResInfo_ResCastCancelled", casterUnit, stopped, unit, guid)
 				resIncoming[guid] = nil
 			elseif finished then
 				print(">> ResCastFinished", (UnitName(casterUnit)), "=>", name, "#", resIncoming[guid])
-				-- callbacks:Fire("LibResInfo_ResCastFinished", casterUnit, casterGUID, unit, guid)
+				callbacks:Fire("LibResInfo_ResCastFinished", casterUnit, casterGUID, unit, guid)
 				local n = total.casting
 				n = n + 1
 				if n > 0 then
@@ -316,7 +375,7 @@ end
 ------------------------------------------------------------------------
 
 function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
-	if validUnits[unit] and resSpells[spellID] then
+	if guidFromUnit[unit] and resSpells[spellID] then
 		debug(1, event, "=>", (UnitName(unit)), "=>", spellName)
 
 		local name, _, _, _, startTime, endTime = UnitCastingInfo(unit)
@@ -329,7 +388,7 @@ function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 end
 
 function f:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
-	if validUnits[unit] and resSpells[spellID] then
+	if guidFromUnit[unit] and resSpells[spellID] then
 		local guid = UnitGUID(unit)
 		if castStart[guid] then
 			debug(1, event, "=>", (UnitName(unit)), "=>", spellName)
@@ -339,7 +398,7 @@ function f:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
 end
 
 function f:UNIT_SPELLCAST_STOPevent, (unit, spellName, _, _, spellID)
-	if validUnits[unit] and resSpells[spellID] then
+	if guidFromUnit[unit] and resSpells[spellID] then
 		local guid = UnitGUID(unit)
 		if castStart[guid] then
 			debug(1, event, "=>", (UnitName(unit)), "=>", spellName)
@@ -350,7 +409,7 @@ function f:UNIT_SPELLCAST_STOPevent, (unit, spellName, _, _, spellID)
 					-- someone else is still casting, send cancellation here
 					local targetUnit = unitFromGUID[targetGUID]
 					print(">> ResCastCancelled", (UnitName(unit)), "=>", (UnitName(targetUnit)))
-					-- callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, targetUnit, targetGUID)
+					callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, targetUnit, targetGUID)
 					castStart[guid], castEnd[guid], castTarget[guid] = nil, nil
 					resIncoming[targetGUID] = n - 1
 				else
@@ -371,7 +430,7 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 		debug(1, combatEvent, "=>", sourceName, "=>", spellName, "=>", destName)
 		if resIncoming[destGUID] then
 			print(">> ResPending", sourceName, "=>" destName)
-			-- callbacks:Fire("LibResInfo_ResPending", unitFromGUID[destGUID], destGUID, timestamp + 120)
+			callbacks:Fire("LibResInfo_ResPending", unitFromGUID[destGUID], destGUID, timestamp + 120)
 			if resIncoming[destGUID] > 1 then
 				resIncoming[destGUID] = resIncoming[destGUID] - 1
 			else
@@ -398,18 +457,18 @@ end
 ------------------------------------------------------------------------
 
 function f:UNIT_HEALTH(unit)
-	if validUnits[unit] then
+	if guidFromUnit[unit] then
 		local guid = UnitGUID(unit)
 		if resPending[guid] then
 			debug(1, "UNIT_HEALTH", (UnitName(unit)), "/ Dead?", UnitIsDead(unit) and "Y" or "N", "/ Ghost?", UnitIsGhost(unit) and "Y" or "N", "/ Offline?", UnitIsConnected(unit) and "N" or "Y")
 			local lost
 			if UnitIsGhost(unit) or not UnitIsConnected(unit) then
 				print(">> ResExpired", (UnitName(unit)))
-				-- callbacks:Fire("LibResInfo_ResExpired", unit, guid)
+				callbacks:Fire("LibResInfo_ResExpired", unit, guid)
 				lost = true
 			elseif not UnitIsDead(unit) then
 				print(">> ResUsed", (UnitName(unit)))
-				-- callbacks:Fire("LibResInfo_ResUsed", unit, guid)
+				callbacks:Fire("LibResInfo_ResUsed", unit, guid)
 				lost = true
 			end
 			if lost then
@@ -438,7 +497,7 @@ f:SetScript("OnUpdate", function(self, elapsed)
 			if expiry - now < INTERVAL then -- will expire before next update
 				local unit = unitFromGUID[guid]
 				print(">> ResExpired", (UnitName(unit))
-				-- callbacks:Fire("LibResInfo_ResExpired", unit, guid)
+				callbacks:Fire("LibResInfo_ResExpired", unit, guid)
 				resPending[guid] = nil
 				total.pending = total.pending - 1
 				if total.pending == 0 then
