@@ -397,7 +397,7 @@ function f:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
 	end
 end
 
-function f:UNIT_SPELLCAST_STOPevent, (unit, spellName, _, _, spellID)
+function f:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 	if guidFromUnit[unit] and resSpells[spellID] then
 		local guid = UnitGUID(unit)
 		if castStart[guid] then
