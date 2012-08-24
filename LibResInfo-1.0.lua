@@ -34,7 +34,7 @@ lib.castTarget = lib.castTarget or {}
 lib.castStart = lib.castStart or {}
 lib.castEnd = lib.castEnd or {}
 
-lib.resIncoming = lib.resIncoming or {}
+lib.resCasting = lib.resCasting or {}
 lib.resPending = lib.resPending or {}
 
 lib.total = lib.total or {}
@@ -51,7 +51,7 @@ local castTarget = lib.castTarget -- caster guid = target guid
 local castStart = lib.castStart   -- caster guid = cast start time
 local castEnd = lib.castEnd       -- caster guid = cast end time
 
-local resIncoming = lib.resIncoming -- dead guid = # res spells being cast on them
+local resCasting = lib.resCasting -- dead guid = # res spells being cast on them
 local resPending  = lib.resPending  -- dead guid = expiration time
 
 local total = lib.total
@@ -123,7 +123,7 @@ function lib:UnitHasIncomingRes(unit)
 			debug(2, true, nil, nil, resPending[guid])
 			return true, nil, nil, resPending[guid]
 		else
-			local single, firstCaster, firstEnd = resIncoming[guid] == 1
+			local single, firstCaster, firstEnd = resCasting[guid] == 1
 			for casterGUID, targetGUID in pairs(castTarget) do
 				if targetGUID == guid then
 					local endTime = castEnd[casterGUID]
@@ -227,19 +227,19 @@ function f:GROUP_ROSTER_UPDATE()
 			debug(2, "solo")
 		end
 	end
---[[
+
 	-- Someone left the group while casting a res.
 	-- Find who they were casting on and cancel it.
-	for caster in pairs(castStart) do
-		if unitFromGUID[caster] then
-			debug(1, (UnitName(unitFromGUID[caster])), "left while casting")
+	for caster in pairs(castEnd) do
+		if not unitFromGUID[caster] then
+			debug(2, caster, "left while casting")
 			local target = castTarget[caster]
 			if target then
 				print(">> ResCastCancelled", (UnitName(unitFromGUID[caster])), (UnitName(unitFromGUID[target])))
-				if resIncoming[target] > 1 then
-					resIncoming[target] = resIncoming[target] - 1
+				if resCasting[target] > 1 then
+					resCasting[target] = resCasting[target] - 1
 				else
-					resIncoming[target] = nil
+					resCasting[target] = nil
 				end
 				castTarget[caster] = nil
 			end
@@ -249,14 +249,14 @@ function f:GROUP_ROSTER_UPDATE()
 
 	-- Someone left the group while a res was being cast on them.
 	-- Find the cast and cancel it.
-	for target, n in pairs(resIncoming) do
+	for target, n in pairs(resCasting) do
 		if not unitFromGUID[target] then
-			debug(1, (UnitName(unitFromGUID[target])), "left while incoming")
+			debug(2, caster, "left while incoming")
 			for caster, castertarget in pairs(castTarget) do
 				if target == castertarget then
 					print(">> ResCastCancelled", (UnitName(unitFromGUID[caster])), (UnitName(unitFromGUID[target])))
 					castTarget[caster], castStart[caster], castEnd[caster] = nil, nil, nil
-					resIncoming[target] = nil
+					resCasting[target] = nil
 				end
 			end
 		end
@@ -266,7 +266,7 @@ function f:GROUP_ROSTER_UPDATE()
 	-- Find the res and cancel it.
 	for target in pairs(resPending) do
 		if not unitFromGUID[target] then
-			debug(1, (UnitName(unitFromGUID[target])), "left while pending")
+			debug(1, caster, "left while pending")
 			print(">> ResExpired", (UnitName(unitFromGUID[target])))
 			resPending[target] = nil
 			total.pending = total.pending - 1
@@ -280,7 +280,7 @@ function f:GROUP_ROSTER_UPDATE()
 	end
 
 	local most = 0
-	for _, n in pairs(resIncoming) do
+	for _, n in pairs(resCasting) do
 		most = max(n, most)
 	end
 	debug(1, "highest # casting:", most)
@@ -304,13 +304,13 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 			for casterGUID, startTime in pairs(castStart) do
 				if startTime - now < 10 and not castTarget[casterGUID] then -- time in ms between cast start and res gain
 					castTarget[casterGUID] = guid
-					if resIncoming[guid] then
-						resIncoming[guid] = resIncoming[guid] + 1
+					if resCasting[guid] then
+						resCasting[guid] = resCasting[guid] + 1
 					else
-						resIncoming[guid] = 1
+						resCasting[guid] = 1
 					end
 					local casterUnit = unitFromGUID[casterGUID]
-					print(">> ResCastStarted", (UnitName(casterUnit)), "=>", name, "ETA", now - startTime, "#", resIncoming[guid])
+					print(">> ResCastStarted", (UnitName(casterUnit)), "=>", name, "ETA", now - startTime, "#", resCasting[guid])
 					callbacks:Fire("LibResInfo_ResCastStarted", casterUnit, casterGUID, unit, guid, now - startTime)
 					found = true
 				end
@@ -322,7 +322,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 				if targetGUID == guid and not castStart[casterGUID] then
 					-- finished casting
 					local casterUnit = unitFromGUID[casterGUID]
-					print(">> ResCastFinished", (UnitName(casterUnit)), "=>", name, "#", resIncoming[guid])
+					print(">> ResCastFinished", (UnitName(casterUnit)), "=>", name, "#", resCasting[guid])
 					callbacks:Fire("LibResInfo_ResCastFinished", casterUnit, casterGUID, unit, guid)
 					castTarget[casterGUID], castEnd[casterGUID] = nil, nil
 					local n = total.casting
@@ -335,7 +335,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 				end
 			end
 
-		elseif resIncoming[guid] then
+		elseif resCasting[guid] then
 			-- had a res, doesn't anymore
 			local finished, stopped
 			for casterGUID, targetGUID in pairs(castTarget) do
@@ -354,11 +354,11 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 			end
 			if stopped then
 				local casterUnit = unitFromGUID[stopped]
-				print(">> ResCastCancelled", (UnitName(casterUnit)), "=>", name, "#", resIncoming[guid])
+				print(">> ResCastCancelled", (UnitName(casterUnit)), "=>", name, "#", resCasting[guid])
 				callbacks:Fire("LibResInfo_ResCastCancelled", casterUnit, stopped, unit, guid)
-				resIncoming[guid] = nil
+				resCasting[guid] = nil
 			elseif finished then
-				print(">> ResCastFinished", (UnitName(casterUnit)), "=>", name, "#", resIncoming[guid])
+				print(">> ResCastFinished", (UnitName(casterUnit)), "=>", name, "#", resCasting[guid])
 				callbacks:Fire("LibResInfo_ResCastFinished", casterUnit, casterGUID, unit, guid)
 				local n = total.casting
 				n = n + 1
@@ -397,21 +397,21 @@ function f:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
 	end
 end
 
-function f:UNIT_SPELLCAST_STOPevent, (unit, spellName, _, _, spellID)
+function f:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 	if guidFromUnit[unit] and resSpells[spellID] then
 		local guid = UnitGUID(unit)
 		if castStart[guid] then
 			debug(1, event, "=>", (UnitName(unit)), "=>", spellName)
 			local targetGUID = castTarget[guid]
 			if targetGUID then
-				local n = resIncoming[targetGUID]
+				local n = resCasting[targetGUID]
 				if n and n > 1 then
 					-- someone else is still casting, send cancellation here
 					local targetUnit = unitFromGUID[targetGUID]
 					print(">> ResCastCancelled", (UnitName(unit)), "=>", (UnitName(targetUnit)))
 					callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, targetUnit, targetGUID)
 					castStart[guid], castEnd[guid], castTarget[guid] = nil, nil
-					resIncoming[targetGUID] = n - 1
+					resCasting[targetGUID] = n - 1
 				else
 					debug(2, "Waiting for INCOMING_RESURRECT_CHANGED.")
 				end
@@ -428,13 +428,13 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 	if combatEvent == "SPELL_RESURRECT" then
 		timestamp = GetTime() * 1000
 		debug(1, combatEvent, "=>", sourceName, "=>", spellName, "=>", destName)
-		if resIncoming[destGUID] then
+		if resCasting[destGUID] then
 			print(">> ResPending", sourceName, "=>" destName)
 			callbacks:Fire("LibResInfo_ResPending", unitFromGUID[destGUID], destGUID, timestamp + 120)
-			if resIncoming[destGUID] > 1 then
-				resIncoming[destGUID] = resIncoming[destGUID] - 1
+			if resCasting[destGUID] > 1 then
+				resCasting[destGUID] = resCasting[destGUID] - 1
 			else
-				resIncoming[destGUID] = nil
+				resCasting[destGUID] = nil
 			end
 			resPending[destGUID] = timestamp + 120
 
