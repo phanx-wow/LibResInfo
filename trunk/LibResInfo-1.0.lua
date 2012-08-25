@@ -15,7 +15,7 @@ Things that can't be done:
 	  but joined the group before the res expired.
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 1
+local DEBUG_LEVEL = 0
 local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
@@ -121,6 +121,8 @@ local function debug(level, text, ...)
 			else
 				text = strjoin(" ", tostringall(text, ...))
 			end
+		else
+			text = tostring(text)
 		end
 		DEBUG_FRAME:AddMessage("|cff00ddba[LRI]|r " .. text)
 	end
@@ -130,35 +132,37 @@ end
 
 function lib:UnitHasIncomingRes(unit)
 	debug(2, "UnitHasIncomingRes", unit)
-	local guid
-	if strmatch(unit, "^0x") then
-		guid = unit
-		unit = unitFromGUID[unit]
-	else
-		guid = UnitGUID(unit)
-		unit = unitFromGUID[guid]
-	end
-	if guid and unit then
-		debug(3, unit, guid, nameFromGUID[guid])
-		if resPending[guid] then
-			debug(3, true, nil, nil, resPending[guid])
-			return true, nil, nil, resPending[guid]
+	if type(unit) == "string" then
+		local guid
+		if strmatch(unit, "^0x") then
+			guid = unit
+			unit = unitFromGUID[unit]
 		else
-			local single, firstCaster, firstEnd = resCasting[guid] == 1
-			for casterGUID, targetGUID in pairs(castTarget) do
-				if targetGUID == guid then
-					local endTime = castEnd[casterGUID]
-					if single then
-						debug(3, true, unitFromGUID[casterGUID], casterGUID, endTime)
-						return true, unitFromGUID[casterGUID], casterGUID, endTime
-					elseif not firstEnd or endTime < firstEnd then
-						firstCaster, firstEnd = casterGUID, endTime
+			guid = UnitGUID(unit)
+			unit = unitFromGUID[guid]
+		end
+		if guid and unit then
+			debug(3, unit, guid, nameFromGUID[guid])
+			if resPending[guid] then
+				debug(3, "true", "nil", "nil", resPending[guid])
+				return true, nil, nil, resPending[guid]
+			else
+				local single, firstCaster, firstEnd = resCasting[guid] == 1
+				for casterGUID, targetGUID in pairs(castTarget) do
+					if targetGUID == guid then
+						local endTime = castEnd[casterGUID]
+						if single then
+							debug(3, "true", unitFromGUID[casterGUID], casterGUID, endTime)
+							return true, unitFromGUID[casterGUID], casterGUID, endTime
+						elseif not firstEnd or endTime < firstEnd then
+							firstCaster, firstEnd = casterGUID, endTime
+						end
 					end
 				end
-			end
-			if firstCaster then
-				debug(3, true, unitFromGUID[firstCaster], firstCaster, firstEnd)
-				return true, unitFromGUID[firstCaster], firstCaster, firstEnd
+				if firstCaster then
+					debug(3, true, unitFromGUID[firstCaster], firstCaster, firstEnd)
+					return true, unitFromGUID[firstCaster], firstCaster, firstEnd
+				end
 			end
 		end
 	end
@@ -167,30 +171,32 @@ end
 
 function lib:UnitIsCastingRes(unit)
 	debug(2, "UnitIsCastingRes", unit)
-	local guid
-	if strmatch(unit, "^0x") then
-		guid = unit
-		unit = unitFromGUID[unit]
-	else
-		guid = UnitGUID(unit)
-		unit = unitFromGUID[guid]
-	end
-	if guid and unit then
-		debug(3, unit, guid, nameFromGUID[guid])
-		local isFirst, targetGUID, endTime = true, castTarget[guid], castEnd[guid]
-		if targetGUID then
-			if resPending[targetGUID] then
-				isFirst = nil
-			else
-				for k, v in pairs(castTarget) do
-					if k ~= guid and v == targetGUID and castEnd[k] < endTime then
-						isFirst = nil
-						break
+	if type(unit) == "string" then
+		local guid
+		if strmatch(unit, "^0x") then
+			guid = unit
+			unit = unitFromGUID[unit]
+		else
+			guid = UnitGUID(unit)
+			unit = unitFromGUID[guid]
+		end
+		if guid and unit then
+			debug(3, unit, guid, nameFromGUID[guid])
+			local isFirst, targetGUID, endTime = true, castTarget[guid], castEnd[guid]
+			if targetGUID then
+				if resPending[targetGUID] then
+					isFirst = nil
+				else
+					for k, v in pairs(castTarget) do
+						if k ~= guid and v == targetGUID and castEnd[k] < endTime then
+							isFirst = nil
+							break
+						end
 					end
 				end
+				debug(3, unitFromGUID[targetGUID], targetGUID, endTime, isFirst)
+				return unitFromGUID[targetGUID], targetGUID, endTime, isFirst
 			end
-			debug(3, unitFromGUID[targetGUID], targetGUID, endTime, isFirst)
-			return unitFromGUID[targetGUID], targetGUID, endTime, isFirst
 		end
 	end
 	debug(3, "nil")
@@ -274,18 +280,18 @@ function f:GROUP_ROSTER_UPDATE()
 	for caster in pairs(castEnd) do
 		if not unitFromGUID[caster] then
 			debug(3, nameFromGUID[caster], "left while casting.")
+			castStart[caster], castEnd[caster] = nil, nil
 			local target = castTarget[caster]
 			if target then
-				debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[target])
-				callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID_old[caster], caster, unitFromGUID[target], target)
 				if resCasting[target] > 1 then
 					resCasting[target] = resCasting[target] - 1
 				else
 					resCasting[target] = nil
 				end
 				castTarget[caster] = nil
+				debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[target])
+				callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID_old[caster], caster, unitFromGUID[target], target)
 			end
-			castStart[caster], castEnd[caster] = nil, nil
 		end
 	end
 
@@ -296,10 +302,10 @@ function f:GROUP_ROSTER_UPDATE()
 			debug(3, nameFromGUID[target], "left while incoming.")
 			for caster, castertarget in pairs(castTarget) do
 				if target == castertarget then
+					resCasting[target] = nil
+					castTarget[caster], castStart[caster], castEnd[caster] = nil, nil, nil
 					debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[target])
 					callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID[caster], caster, unitFromGUID_old[target], target)
-					castTarget[caster], castStart[caster], castEnd[caster] = nil, nil, nil
-					resCasting[target] = nil
 				end
 			end
 		end
@@ -310,10 +316,10 @@ function f:GROUP_ROSTER_UPDATE()
 	for target in pairs(resPending) do
 		if not unitFromGUID[target] then
 			debug(2, nameFromGUID[target], "left while pending.")
-			debug(1, ">> ResExpired", "=>", nameFromGUID[target])
-			callbacks:Fire("LibResInfo_ResExpired", unitFromGUID_old[target], target)
 			resPending[target] = nil
 			total.pending = total.pending - 1
+			debug(1, ">> ResExpired", "=>", nameFromGUID[target])
+			callbacks:Fire("LibResInfo_ResExpired", unitFromGUID_old[target], target)
 		end
 	end
 
@@ -371,9 +377,10 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 				if targetGUID == guid and not castStart[casterGUID] then
 					-- finished casting
 					local casterUnit = unitFromGUID[casterGUID]
+					castTarget[casterGUID], castEnd[casterGUID] = nil, nil
 					debug(1, ">> ResCastFinished", nameFromGUID[casterGUID], "=>", nameFromGUID[guid], "#", resCasting[guid])
 					callbacks:Fire("LibResInfo_ResCastFinished", casterUnit, casterGUID, unit, guid)
-					castTarget[casterGUID], castEnd[casterGUID] = nil, nil
+
 					local n = total.casting
 					n = n + 1
 					if n > 0 then
@@ -403,12 +410,13 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 			end
 			if stopped then
 				local casterUnit = unitFromGUID[stopped]
+				resCasting[guid] = nil
 				debug(1, ">> ResCastCancelled", nameFromGUID[casterGUID], "=>", nameFromGUID[guid], "#", resCasting[guid] - 1)
 				callbacks:Fire("LibResInfo_ResCastCancelled", casterUnit, stopped, unit, guid)
-				resCasting[guid] = nil
 			elseif finished then
 				debug(1, ">> ResCastFinished", nameFromGUID[casterGUID], "=>", nameFromGUID[guid], "#", resCasting[guid] - 1)
 				callbacks:Fire("LibResInfo_ResCastFinished", casterUnit, casterGUID, unit, guid)
+
 				local n = total.casting
 				n = n + 1
 				if n > 0 then
@@ -457,10 +465,10 @@ function f:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 				if n and n > 1 then
 					-- someone else is still casting, send cancellation here
 					local targetUnit = unitFromGUID[targetGUID]
-					debug(1, ">> ResCastCancelled", nameFromGUID[guid], "=>", nameFromGUID[targetGUID])
-					callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, targetUnit, targetGUID)
 					castStart[guid], castEnd[guid], castTarget[guid] = nil, nil
 					resCasting[targetGUID] = n - 1
+					debug(1, ">> ResCastCancelled", nameFromGUID[guid], "=>", nameFromGUID[targetGUID])
+					callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, targetUnit, targetGUID)
 				else
 					debug(3, "Waiting for INCOMING_RESURRECT_CHANGED.")
 				end
@@ -478,8 +486,6 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 		local now = GetTime()
 		debug(2, combatEvent, "=>", sourceName, "=>", spellName, "=>", destName)
 		if resCasting[destGUID] then
-			debug(1, ">> ResPending", sourceName, "=>", destName)
-			callbacks:Fire("LibResInfo_ResPending", unitFromGUID[destGUID], destGUID, now + 60)
 			if resCasting[destGUID] > 1 then
 				resCasting[destGUID] = resCasting[destGUID] - 1
 			else
@@ -488,6 +494,9 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 
 			local new = not resPending[destGUID]
 			resPending[destGUID] = now + 60
+
+			debug(1, ">> ResPending", sourceName, "=>", destName)
+			callbacks:Fire("LibResInfo_ResPending", unitFromGUID[destGUID], destGUID, now + 60)
 
 			total.casting = total.casting - 1
 			if total.casting == 0 then
@@ -513,20 +522,24 @@ end
 function f:UNIT_HEALTH(event, unit)
 	local guid = guidFromUnit[unit]
 	if guidFromUnit[unit] then
-			debug(2, event, nameFromGUID[guid], "Dead", UnitIsDead(unit), "Ghost", UnitIsGhost(unit), "Offline", not UnitIsConnected(unit))
 		if resPending[guid] then
+			debug(2, event, nameFromGUID[guid], "Dead", UnitIsDead(unit), "Ghost", UnitIsGhost(unit), "Offline", not UnitIsConnected(unit))
+
 			local lost
+
 			if UnitIsGhost(unit) or not UnitIsConnected(unit) then
+				resPending[guid] = nil
 				debug(1, ">> ResExpired", nameFromGUID[guid])
-				callbacks:Fire("LibResInfo_ResExpired", unit, guid)
-				lost = true
+				lost = "LibResInfo_ResExpired"
 			elseif not UnitIsDead(unit) then
 				debug(1, ">> ResUsed", nameFromGUID[guid])
-				callbacks:Fire("LibResInfo_ResUsed", unit, guid)
-				lost = true
+				lost = "LibResInfo_ResUsed"
 			end
+
 			if lost then
 				resPending[guid] = nil
+				callbacks:Fire(lost, unit, guid)
+
 				total.pending = total.pending - 1
 				if total.pending == 0 then
 					debug(3, "0 pending, unregister UNIT_HEALTH/AURA")
@@ -554,9 +567,10 @@ f:SetScript("OnUpdate", function(self, elapsed)
 		for guid, expiry in pairs(resPending) do
 			if expiry - now < INTERVAL then -- will expire before next update
 				local unit = unitFromGUID[guid]
+				resPending[guid] = nil
 				debug(1, ">> ResExpired", nameFromGUID[guid])
 				callbacks:Fire("LibResInfo_ResExpired", unit, guid)
-				resPending[guid] = nil
+
 				total.pending = total.pending - 1
 				if total.pending == 0 then
 					self:UnregisterEvent("UNIT_HEALTH")
