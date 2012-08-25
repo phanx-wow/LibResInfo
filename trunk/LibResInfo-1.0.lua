@@ -324,6 +324,7 @@ function f:GROUP_ROSTER_UPDATE()
 	debug(2, "# pending:", total.pending)
 	if total.pending == 0 then
 		self:UnregisterEvent("UNIT_HEALTH")
+		self:Hide()
 	end
 
 	local most = 0
@@ -351,7 +352,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 		debug(2, "INCOMING_RESURRECT_CHANGED", "=>", name, "=>", hasRes)
 
 		if hasRes then
-			local now, found = GetTime() * 1000
+			local now, found = GetTime()
 			for casterGUID, startTime in pairs(castStart) do
 				if startTime - now < 10 and not castTarget[casterGUID] then -- time in ms between cast start and res gain
 					castTarget[casterGUID] = guid
@@ -431,10 +432,10 @@ function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 		debug(2, event, "=>", nameFromGUID[guid], "=>", spellName)
 
 		local _, _, _, _, startTime, endTime = UnitCastingInfo(unit)
-		debug(3, "UnitCastingInfo =>", spellName, startTime, endTime)
+		debug(3, "UnitCastingInfo =>", spellName, startTime / 1000, endTime / 1000)
 
-		castStart[guid] = startTime
-		castEnd[guid] = endTime
+		castStart[guid] = startTime / 1000
+		castEnd[guid] = endTime / 1000
 	end
 end
 
@@ -477,17 +478,17 @@ f.UNIT_SPELLCAST_INTERRUPTED = f.UNIT_SPELLCAST_STOP
 
 function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID, spellName, spellSchool)
 	if combatEvent == "SPELL_RESURRECT" then
-		timestamp = GetTime() * 1000
+		local now = GetTime()
 		debug(2, combatEvent, "=>", sourceName, "=>", spellName, "=>", destName)
 		if resCasting[destGUID] then
 			debug(1, ">> ResPending", sourceName, "=>", destName)
-			callbacks:Fire("LibResInfo_ResPending", unitFromGUID[destGUID], destGUID, timestamp + 120)
+			callbacks:Fire("LibResInfo_ResPending", unitFromGUID[destGUID], destGUID, now + 60)
 			if resCasting[destGUID] > 1 then
 				resCasting[destGUID] = resCasting[destGUID] - 1
 			else
 				resCasting[destGUID] = nil
 			end
-			resPending[destGUID] = timestamp + 120
+			resPending[destGUID] = now + 60
 
 			total.casting = total.casting - 1
 			if total.casting == 0 then
@@ -500,6 +501,8 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 				debug(3, total.pending, "pending, register UNIT_HEALTH, start timer")
 				self:RegisterEvent("UNIT_HEALTH")
 				self:Show()
+			else
+				debug(3, total.pending, "pending, no timer")
 			end
 		end
 	end
@@ -538,11 +541,11 @@ end
 
 f:Hide()
 
-local timer = 0
+local timer, timer2 = 0, 0
 local INTERVAL = 0.5
 f:SetScript("OnUpdate", function(self, elapsed)
 	timer = timer + elapsed
-	if timer > INTERVAL then
+	if timer >= INTERVAL then
 		local now = GetTime()
 		for guid, expiry in pairs(resPending) do
 			if expiry - now < INTERVAL then -- will expire before next update
@@ -559,4 +562,13 @@ f:SetScript("OnUpdate", function(self, elapsed)
 		end
 		timer = 0
 	end
+end)
+
+f:SetScript("OnShow", function()
+	debug(2, "Show")
+end)
+
+f:SetScript("OnHide", function()
+	debug(2, "Hide")
+	timer, timer2 = 0, 0
 end)
