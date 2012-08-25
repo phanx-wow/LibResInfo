@@ -6,19 +6,16 @@ See the accompanying README and LICENSE files for more information.
 
 Things to do:
 	* Refactor messy and redundant sections
-	* Detect resurrections being cast on group members by players who
-	  join the group while casting.
-	* Detect resurrections being cast by group members on players who
-	  join the group while being resurrected.
+	* Detect resurrections being cast on group members by players who join the group while casting.
+	* Detect resurrections being cast by group members on players who join the group while being resurrected.
 
 Things that can't be done:
 	* Detect when a pending res is declined manually.
-	* Detect pending resurrections when either the caster or target was
-	  not in the group when the cast completed, but joined the group
-	  before the res expired.
+	* Detect pending resurrections when either the caster or target was not in the group when the cast completed,
+	  but joined the group before the res expired.
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 3
+local DEBUG_LEVEL = 1
 local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
@@ -488,6 +485,8 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 			else
 				resCasting[destGUID] = nil
 			end
+
+			local new = not resPending[destGUID]
 			resPending[destGUID] = now + 60
 
 			total.casting = total.casting - 1
@@ -496,13 +495,14 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 				self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 			end
 
-			total.pending = total.pending + 1
-			if total.pending > 0 then
-				debug(3, total.pending, "pending, register UNIT_HEALTH, start timer")
+			if new then
+				total.pending = total.pending + 1
+				debug(3, total.pending, "pending, start timer, register UNIT_HEALTH/AURA")
 				self:RegisterEvent("UNIT_HEALTH")
+				self:RegisterEvent("UNIT_AURA")
 				self:Show()
 			else
-				debug(3, total.pending, "pending, no timer")
+				debug(3, total.pending, "pending, timer already running")
 			end
 		end
 	end
@@ -510,11 +510,11 @@ end
 
 ------------------------------------------------------------------------
 
-function f:UNIT_HEALTH(unit)
+function f:UNIT_HEALTH(event, unit)
+	local guid = guidFromUnit[unit]
 	if guidFromUnit[unit] then
-		local guid = UnitGUID(unit)
+			debug(2, event, nameFromGUID[guid], "Dead", UnitIsDead(unit), "Ghost", UnitIsGhost(unit), "Offline", not UnitIsConnected(unit))
 		if resPending[guid] then
-			debug(2, "UNIT_HEALTH", nameFromGUID[guid], "/ Dead?", UnitIsDead(unit) and "Y" or "N", "/ Ghost?", UnitIsGhost(unit) and "Y" or "N", "/ Offline?", UnitIsConnected(unit) and "N" or "Y")
 			local lost
 			if UnitIsGhost(unit) or not UnitIsConnected(unit) then
 				debug(1, ">> ResExpired", nameFromGUID[guid])
@@ -529,7 +529,8 @@ function f:UNIT_HEALTH(unit)
 				resPending[guid] = nil
 				total.pending = total.pending - 1
 				if total.pending == 0 then
-					debug(3, "0 pending, unregister UNIT_HEALTH")
+					debug(3, "0 pending, unregister UNIT_HEALTH/AURA")
+					self:UnregisterEvent("UNIT_AURA")
 					self:UnregisterEvent("UNIT_HEALTH")
 				end
 			end
@@ -537,15 +538,18 @@ function f:UNIT_HEALTH(unit)
 	end
 end
 
+f.UNIT_AURA = f.UNIT_HEALTH
+
 ------------------------------------------------------------------------
 
 f:Hide()
 
-local timer, timer2 = 0, 0
+local timer = 0
 local INTERVAL = 0.5
 f:SetScript("OnUpdate", function(self, elapsed)
 	timer = timer + elapsed
 	if timer >= INTERVAL then
+		debug(5, "timer update")
 		local now = GetTime()
 		for guid, expiry in pairs(resPending) do
 			if expiry - now < INTERVAL then -- will expire before next update
@@ -565,10 +569,10 @@ f:SetScript("OnUpdate", function(self, elapsed)
 end)
 
 f:SetScript("OnShow", function()
-	debug(2, "Show")
+	debug(2, "timer start")
 end)
 
 f:SetScript("OnHide", function()
-	debug(2, "Hide")
-	timer, timer2 = 0, 0
+	debug(2, "timer stop")
+	timer = 0
 end)
