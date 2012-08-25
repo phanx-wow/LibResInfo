@@ -22,12 +22,13 @@ local DEBUG_FRAME = ChatFrame1
 
 local MAJOR, MINOR = "LibResInfo-1.0", 1
 assert(LibStub, MAJOR.." requires LibStub")
+assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
 
 ------------------------------------------------------------------------
 
-lib.callbacks = lib.callbacks or LibStub:GetLibrary("CallbackHandler-1.0"):New(lib)
+lib.callbacks = lib.callbacks or LibStub("CallbackHandler-1.0"):New(lib)
 
 lib.eventFrame = lib.eventFrame or CreateFrame("Frame")
 
