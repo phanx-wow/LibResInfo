@@ -19,6 +19,8 @@ LibResInfo was written to replace LibResComm. It works locally without
 the need for addon communication, so it is not necessary for anyone else
 in your group to have it installed.
 
+Requires LibStub and CallbackHandler-1.0.
+
 
 API Documentation
 -----------------
