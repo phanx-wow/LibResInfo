@@ -8,10 +8,10 @@
 ## X-Email: addons@phanx.net
 ## X-Copyright: Copyright (c) 2012 A. "Phanx" Kinley. All rights reserved.
 ## X-License: See accompanying LICENSE file for details.
-## X-Website:
+## X-Website: http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html
 ## X-AceForum: 2525
 ## X-Curse-Project-ID: libresinfo
-## X-WoWI-ID: 5747
+## X-WoWI-ID: 21467
 
 ## OptionalDeps: LibStub, CallbackHandler-1.0
 

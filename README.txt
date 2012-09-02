@@ -4,8 +4,8 @@ LibResInfo-1.0
 Library to provide information about resurrections cast in your group.
 Copyright (c) 2012 A. "Phanx" Kinley. All rights reserved.
 See the accompanying LICENSE file for details.
-http://wow.curseforge.com/addons/librescomm/
-http://www.wowinterface.com/
+http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html
+http://wow.curseforge.com/addons/libresinfo/
 
 
 Description
@@ -33,14 +33,9 @@ available on the CurseForge project page:
 Feedback
 --------
 
-Bugs, errors, or other problems:
-	Submit a bug report ticket on either download page.
-
-Feature requests or other suggestions:
-	Submit a feature request ticket on either download page.
-
-General questions or comments:
-	Post a comment on the WoWInterface download page.
+Please direct all bug reports, suggestions, questions, and comments to
+the WoWInterface forum thread:
+	http://www.wowinterface.com/forums/showthread.php?t=43933
 
 If you need to contact me privately for a reason other than those listed
 above, you can send me a private message on either download site, or
