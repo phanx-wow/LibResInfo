@@ -5,6 +5,7 @@ Copyright (c) 2012 A. Kinley <addons@phanx.net>. All rights reserved.
 See the accompanying README and LICENSE files for more information.
 
 Things to do:
+	* Add support for Mass Resurrection.
 	* Refactor messy and redundant sections
 	* Detect resurrections being cast on group members by players who join the group while casting.
 	* Detect resurrections being cast by group members on players who join the group while being resurrected.
@@ -591,3 +592,27 @@ f:SetScript("OnHide", function()
 	debug(2, "timer stop")
 	timer = 0
 end)
+
+------------------------------------------------------------------------
+
+SLASH_LIBRESINFO1 = "/lri"
+SlashCmdList.LIBRESINFO = function(input)
+	input = strtrim(input)
+	if strmatch(input, "%D") then
+		local f = _G[input]
+		if type(f) == "table" and type(f.AddMessage) == "function" then
+			DEBUG_FRAME = f
+			debug(0, "Debug frame set to", input)
+		else
+			debug(0, input, "is not a valid debug output frame!")
+		end
+	else
+		local v = tonumber(input)
+		if v and v >= 0 then
+			DEBUG_LEVEL = v
+			debug(0, "Debug level set to", input)
+		else
+			debug(0, input, "is not a valid debug level!")
+		end
+	end
+end
