@@ -37,9 +37,10 @@ lib.guidFromUnit = lib.guidFromUnit or {}
 lib.nameFromGUID = lib.nameFromGUID or {}
 lib.unitFromGUID = lib.unitFromGUID or {}
 
-lib.castTarget = lib.castTarget or {}
 lib.castStart = lib.castStart or {}
 lib.castEnd = lib.castEnd or {}
+lib.castTarget = lib.castTarget or {}
+lib.castMass = lib.castMass or {}
 
 lib.resCasting = lib.resCasting or {}
 lib.resPending = lib.resPending or {}
@@ -55,12 +56,13 @@ local guidFromUnit = lib.guidFromUnit -- unit = guid
 local nameFromGUID = lib.nameFromGUID -- guid = name
 local unitFromGUID = lib.unitFromGUID -- guid = unit
 
-local castTarget = lib.castTarget -- caster guid = target guid
 local castStart = lib.castStart   -- caster guid = cast start time
 local castEnd = lib.castEnd       -- caster guid = cast end time
+local castTarget = lib.castTarget -- caster guid = target guid
+local castMass = lib.castMass     -- caster guid = casting Mass Res
 
-local resCasting = lib.resCasting -- dead guid = # res spells being cast on them
-local resPending  = lib.resPending  -- dead guid = expiration time
+local resCasting = lib.resCasting  -- dead guid = # res spells being cast on them
+local resPending  = lib.resPending -- dead guid = expiration time
 
 local total = lib.total
 total.casting = total.casting or 0 -- # res spells being cast
@@ -70,9 +72,10 @@ if DEBUG_LEVEL > 0 then
 	LRI = {
 		unitFromGUID = unitFromGUID,
 
-		castTarget = castTarget,
 		castStart = castStart,
 		castEnd = castEnd,
+		castTarget = castTarget,
+		castMass = castMass,
 
 		resCasting = resCasting,
 		resPending = resPending,
@@ -96,6 +99,7 @@ local resSpells = {
 	[50769]  = GetSpellInfo(50769),  -- Revive (druid)
 	[982]    = GetSpellInfo(982),    -- Revive Pet (hunter)
 	[20707]  = GetSpellInfo(20707),  -- Soulstone (warlock)
+	[83968]  = GetSpellInfo(83968),  -- Mass Resurrection
 }
 
 ------------------------------------------------------------------------
@@ -146,24 +150,27 @@ function lib:UnitHasIncomingRes(unit)
 		if guid and unit then
 			debug(3, unit, guid, nameFromGUID[guid])
 			if resPending[guid] then
-				debug(3, "true", "nil", "nil", resPending[guid])
-				return true, nil, nil, resPending[guid]
+				debug(3, true, resPending[guid])
+				return true, resPending[guid]
 			else
-				local single, firstCaster, firstEnd = resCasting[guid] == 1
+				local firstCaster, firstEnd
 				for casterGUID, targetGUID in pairs(castTarget) do
 					if targetGUID == guid then
 						local endTime = castEnd[casterGUID]
-						if single then
-							debug(3, "true", unitFromGUID[casterGUID], casterGUID, endTime)
-							return true, unitFromGUID[casterGUID], casterGUID, endTime
-						elseif not firstEnd or endTime < firstEnd then
+						if not firstEnd or endTime < firstEnd then
 							firstCaster, firstEnd = casterGUID, endTime
 						end
 					end
 				end
+				for casterGUID in pairs(castMass) do
+					local endTime = castEnd[casterGUID]
+					if not firstEnd or endTime < firstEnd then
+						firstCaster, firstEnd = casterGUID, endTime
+					end
+				end
 				if firstCaster then
-					debug(3, true, unitFromGUID[firstCaster], firstCaster, firstEnd)
-					return true, unitFromGUID[firstCaster], firstCaster, firstEnd
+					debug(3, true, firstEnd, unitFromGUID[firstCaster], firstCaster)
+					return true, firstEnd, unitFromGUID[firstCaster], firstCaster
 				end
 			end
 		end
@@ -195,9 +202,18 @@ function lib:UnitIsCastingRes(unit)
 							break
 						end
 					end
+					for k in pairs(castMass) do
+						if k ~= guid and castEnd[k] < endTime then
+							isFirst = nil
+							break
+						end
+					end
 				end
-				debug(3, unitFromGUID[targetGUID], targetGUID, endTime, isFirst)
-				return unitFromGUID[targetGUID], targetGUID, endTime, isFirst
+				debug(3, endTime, unitFromGUID[targetGUID], targetGUID, isFirst)
+				return endTime, unitFromGUID[targetGUID], targetGUID, isFirst
+			elseif massCast[guid] then
+				debug(3, endTime)
+				return endTime
 			end
 		end
 	end
@@ -368,7 +384,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 					end
 					local casterUnit = unitFromGUID[casterGUID]
 					debug(1, ">> ResCastStarted", nameFromGUID[casterGUID], "=>", nameFromGUID[guid], "DIFF", now - startTime, "#", resCasting[guid])
-					callbacks:Fire("LibResInfo_ResCastStarted", casterUnit, casterGUID, unit, guid, now - startTime)
+					callbacks:Fire("LibResInfo_ResCastStarted", casterUnit, casterGUID, now - startTime, unit, guid)
 					found = true
 				end
 			end
@@ -443,6 +459,8 @@ function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 
 		castStart[guid] = startTime / 1000
 		castEnd[guid] = endTime / 1000
+
+		castMass[guid] = spellID == 83968 -- Mass Resurrection
 	end
 end
 
@@ -468,6 +486,7 @@ function f:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 					-- someone else is still casting, send cancellation here
 					local targetUnit = unitFromGUID[targetGUID]
 					castStart[guid], castEnd[guid], castTarget[guid] = nil, nil
+					if cast
 					resCasting[targetGUID] = n - 1
 					debug(1, ">> ResCastCancelled", nameFromGUID[guid], "=>", nameFromGUID[targetGUID])
 					callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, targetUnit, targetGUID)
