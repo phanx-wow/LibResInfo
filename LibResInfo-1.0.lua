@@ -5,15 +5,17 @@ Copyright (c) 2012 A. Kinley <addons@phanx.net>. All rights reserved.
 See the accompanying README and LICENSE files for more information.
 
 Things to do:
-	* Add support for Mass Resurrection.
-	* Refactor messy and redundant sections
-	* Detect resurrections being cast on group members by players who join the group while casting.
-	* Detect resurrections being cast by group members on players who join the group while being resurrected.
+	* Refactor messy and redundant sections.
+	* Detect resurrections being cast on group members by players
+	  who join the group while casting.
+	* Detect resurrections being cast by group members on players
+	  who join the group while being resurrected.
 
 Things that can't be done:
 	* Detect when a pending res is declined manually.
-	* Detect pending resurrections when either the caster or target was not in the group when the cast completed,
-	  but joined the group before the res expired.
+	* Detect pending resurrections when either the caster or target
+	  was not in the group when the cast completed, but joined the
+	  group before the res expired.
 ----------------------------------------------------------------------]]
 
 local DEBUG_LEVEL = 0
@@ -21,7 +23,7 @@ local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 1
+local MAJOR, MINOR = "LibResInfo-1.0", 2
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -152,8 +154,8 @@ function lib:UnitHasIncomingRes(unit)
 		if guid and unit then
 			debug(3, unit, guid, nameFromGUID[guid])
 			if resPending[guid] then
-				debug(3, true, resPending[guid])
-				return true, resPending[guid]
+				debug(3, "PENDING", resPending[guid])
+				return "PENDING", resPending[guid]
 			else
 				local firstCaster, firstEnd
 				for casterGUID, targetGUID in pairs(castTarget) do
@@ -171,8 +173,8 @@ function lib:UnitHasIncomingRes(unit)
 					end
 				end
 				if firstCaster then
-					debug(3, true, firstEnd, unitFromGUID[firstCaster], firstCaster)
-					return true, firstEnd, unitFromGUID[firstCaster], firstCaster
+					debug(3, "CASTING", firstEnd, unitFromGUID[firstCaster], firstCaster)
+					return "CASTING", firstEnd, unitFromGUID[firstCaster], firstCaster
 				end
 			end
 		end
@@ -390,7 +392,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 			local now, found = GetTime()
 			for casterGUID, startTime in pairs(castStart) do
 				if startTime - now < 10 and not castTarget[casterGUID] then -- time in ms between cast start and res gain
-					if not massCasting[casterGUID] then
+					if not castMass[casterGUID] then
 						castTarget[casterGUID] = guid
 					end
 					if resCasting[guid] then
@@ -469,8 +471,8 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 
 			if stopped then
 				local casterUnit = unitFromGUID[stopped]
-				resCasting[guid] = nil
 				debug(1, ">> ResCastCancelled", nameFromGUID[casterGUID], "=>", nameFromGUID[guid], "#", resCasting[guid] - 1)
+				resCasting[guid] = nil
 				callbacks:Fire("LibResInfo_ResCastCancelled", casterUnit, stopped, unit, guid)
 
 			elseif finished then
@@ -502,7 +504,9 @@ function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 		castStart[guid] = startTime / 1000
 		castEnd[guid] = endTime / 1000
 
-		castMass[guid] = spellID == 83968 -- Mass Resurrection
+		if spellID == 83968 then -- Mass Resurrection
+			castMass[guid] = true
+		end
 	end
 end
 
