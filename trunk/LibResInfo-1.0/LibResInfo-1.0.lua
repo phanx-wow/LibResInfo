@@ -9,8 +9,6 @@ Things to do:
 	  ResCastStarted for them.
 	* Detect when players res while Mass Res is casting, and fire
 	  ResCastStopped for them.
-	* Figure out a more reliable way to distinguish between ResUsed and
-	  ResExpired in UNIT_HEALTH.
 	* Refactor messy and redundant sections.
 	* Detect resurrections being cast on group members by players
 	  who join the group while casting.
@@ -29,7 +27,7 @@ local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 3
+local MAJOR, MINOR = "LibResInfo-1.0", 4
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -80,7 +78,6 @@ total.pending = total.pending or 0 -- # resses available to take
 
 local ghost = lib.ghost
 
-local RECENTLY_MASS_RESURRECTED = GetSpellInfo(95223)
 
 if DEBUG_LEVEL > 0 then
 	LRI = {
@@ -100,6 +97,9 @@ if DEBUG_LEVEL > 0 then
 end
 
 ------------------------------------------------------------------------
+
+local RESURRECT_PENDING_TIME = 60
+local RECENTLY_MASS_RESURRECTED = GetSpellInfo(95223)
 
 local resSpells = {
 	[2008]   = GetSpellInfo(2008),   -- Ancestral Spirit (shaman)
@@ -162,7 +162,7 @@ function lib:UnitHasIncomingRes(unit)
 			guid = UnitGUID(unit)
 			unit = unitFromGUID[guid]
 		end
-		if guid and unit then
+		if guid and unit and UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) then
 			debug(3, unit, guid, nameFromGUID[guid])
 			if resPending[guid] then
 				debug(3, "PENDING", resPending[guid])
@@ -177,7 +177,7 @@ function lib:UnitHasIncomingRes(unit)
 						end
 					end
 				end
-				if UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) and UnitIsVisible(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
+				if UnitIsVisible(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
 					for casterGUID in pairs(castMass) do
 						local endTime = castEnd[casterGUID]
 						if not firstEnd or endTime < firstEnd then
@@ -185,7 +185,7 @@ function lib:UnitHasIncomingRes(unit)
 						end
 					end
 				end
-				if firstCaster then
+				if firstCaster and firstEnd then
 					debug(3, "CASTING", firstEnd, unitFromGUID[firstCaster], firstCaster)
 					return "CASTING", firstEnd, unitFromGUID[firstCaster], firstCaster
 				end
@@ -593,7 +593,7 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 				end
 
 				local new = not resPending[destGUID]
-				resPending[destGUID] = now + 60
+				resPending[destGUID] = now + RESURRECT_PENDING_TIME
 
 				total.casting = total.casting - 1
 				if total.casting == 0 then
@@ -604,7 +604,7 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 				if castMass[sourceGUID] then
 					local n = 0
 					for guid, unit in pairs(unitFromGUID) do
-						if guid ~= destGUID and (not resPending[guid] or resPending[guid] - now > 60) and UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
+						if guid ~= destGUID and (not resPending[guid] or resPending[guid] - now > RESURRECT_PENDING_TIME) and UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
 							n = n + 1
 						end
 					end
@@ -627,7 +627,7 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 				end
 
 				debug(1, ">> ResPending", sourceName, "=>", destName)
-				callbacks:Fire("LibResInfo_ResPending", destUnit, destGUID, now + 60)
+				callbacks:Fire("LibResInfo_ResPending", destUnit, destGUID, now + RESURRECT_PENDING_TIME)
 			end
 		end
 	end
