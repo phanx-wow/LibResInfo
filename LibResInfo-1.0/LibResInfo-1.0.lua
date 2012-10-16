@@ -174,7 +174,7 @@ function lib:UnitHasIncomingRes(unit)
 				for casterGUID, targetGUID in pairs(castTarget) do
 					if targetGUID == guid then
 						local endTime = castEnd[casterGUID]
-						if not firstEnd or endTime < firstEnd then
+						if endTime and (not firstEnd or endTime < firstEnd) then
 							firstCaster, firstEnd = casterGUID, endTime
 						end
 					end
@@ -182,7 +182,7 @@ function lib:UnitHasIncomingRes(unit)
 				if UnitIsVisible(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
 					for casterGUID in pairs(castMass) do
 						local endTime = castEnd[casterGUID]
-						if not firstEnd or endTime < firstEnd then
+						if endTime and (not firstEnd or endTime < firstEnd) then
 							firstCaster, firstEnd = casterGUID, endTime
 						end
 					end
