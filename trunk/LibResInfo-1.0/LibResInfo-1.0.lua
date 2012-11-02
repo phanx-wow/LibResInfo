@@ -321,10 +321,12 @@ function f:GROUP_ROSTER_UPDATE()
 			castStart[caster], castEnd[caster] = nil, nil
 			local target = castTarget[caster]
 			if target then
-				if resCasting[target] > 1 then
-					resCasting[target] = resCasting[target] - 1
-				else
-					resCasting[target] = nil
+				if resCasting[target] then
+					if resCasting[target] > 1 then
+						resCasting[target] = resCasting[target] - 1
+					else
+						resCasting[target] = nil
+					end
 				end
 				castTarget[caster] = nil
 				debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[target])
@@ -333,10 +335,12 @@ function f:GROUP_ROSTER_UPDATE()
 				castMass[caster] = nil
 				for guid, unit in pairs(guidFromUnit) do
 					if UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) and UnitIsVisible(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
-						if resCasting[guid] > 0 then
-							resCasting[guid] = resCasting[guid] - 1
-						else
-							resCasting[guid] = nil
+						if resCasting[guid] then
+							if resCasting[guid] > 0 then
+								resCasting[guid] = resCasting[guid] - 1
+							else
+								resCasting[guid] = nil
+							end
 						end
 						debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[guid])
 						callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID_old[caster], caster, unitFromGUID[target], target)
