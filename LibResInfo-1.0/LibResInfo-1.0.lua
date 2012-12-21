@@ -5,21 +5,16 @@ Copyright (c) 2012 A. Kinley <addons@phanx.net>. All rights reserved.
 See the accompanying README and LICENSE files for more information.
 
 Things to do:
-	* Detect when players die while Mass Res is casting, and fire
-	  ResCastStarted for them.
-	* Detect when players res while Mass Res is casting, and fire
-	  ResCastStopped for them.
-	* Refactor messy and redundant sections.
-	* Detect resurrections being cast on group members by players
-	  who join the group while casting.
-	* Detect resurrections being cast by group members on players
-	  who join the group while being resurrected.
+* Refactor messy and redundant sections.
+* Detect when players die while Mass Res is casting, and fire ResCastStarted for them.
+* Detect when players res while Mass Res is casting, and fire ResCastStopped for them.
+* Detect resurrections being cast on group members by players who join the group while casting.
+* Detect resurrections being cast by group members on players who join the group while being resurrected.
 
 Things that can't be done:
-	* Detect when a pending res is declined manually.
-	* Detect pending resurrections when either the caster or target
-	  was not in the group when the cast completed, but joined the
-	  group before the res expired.
+* Detect when a pending res is declined manually.
+* Detect pending resurrections when either the caster or target was not in the group when the cast completed,
+  but joined the group before the res expired.
 ----------------------------------------------------------------------]]
 
 local DEBUG_LEVEL = 0
@@ -80,7 +75,7 @@ local ghost = lib.ghost
 
 
 if DEBUG_LEVEL > 0 then
-	LRI = {
+	LibResInfo = {
 		unitFromGUID = unitFromGUID,
 
 		castStart = castStart,
@@ -121,18 +116,16 @@ local resSpells = {
 
 ------------------------------------------------------------------------
 
-f.callbacks = LibStub("CallbackHandler-1.0"):New(f)
-
 f:SetScript("OnEvent", function(self, event, ...)
 	return self[event] and self[event](self, event, ...)
 end)
 
 f:RegisterEvent("GROUP_ROSTER_UPDATE")
 f:RegisterEvent("INCOMING_RESURRECT_CHANGED")
-f:RegisterEvent("UNIT_SPELLCAST_START")
-f:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-f:RegisterEvent("UNIT_SPELLCAST_STOP")
 f:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+f:RegisterEvent("UNIT_SPELLCAST_START")
+f:RegisterEvent("UNIT_SPELLCAST_STOP")
+f:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 
 ------------------------------------------------------------------------
 
@@ -321,12 +314,10 @@ function f:GROUP_ROSTER_UPDATE()
 			castStart[caster], castEnd[caster] = nil, nil
 			local target = castTarget[caster]
 			if target then
-				if resCasting[target] then
-					if resCasting[target] > 1 then
-						resCasting[target] = resCasting[target] - 1
-					else
-						resCasting[target] = nil
-					end
+				if resCasting[target] > 1 then
+					resCasting[target] = resCasting[target] - 1
+				else
+					resCasting[target] = nil
 				end
 				castTarget[caster] = nil
 				debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[target])
@@ -335,12 +326,10 @@ function f:GROUP_ROSTER_UPDATE()
 				castMass[caster] = nil
 				for guid, unit in pairs(guidFromUnit) do
 					if UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) and UnitIsVisible(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
-						if resCasting[guid] then
-							if resCasting[guid] > 0 then
-								resCasting[guid] = resCasting[guid] - 1
-							else
-								resCasting[guid] = nil
-							end
+						if resCasting[guid] > 0 then
+							resCasting[guid] = resCasting[guid] - 1
+						else
+							resCasting[guid] = nil
 						end
 						debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[guid])
 						callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID_old[caster], caster, unitFromGUID[target], target)

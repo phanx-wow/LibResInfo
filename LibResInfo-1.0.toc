@@ -1,5 +1,5 @@
-## Interface: 50001
-## Version: rwowi:revision-beta
+## Interface: 50100
+## Version: rwowi:revision
 
 ## Title: Lib: ResInfo-1.0
 ## Notes: Library to provide information about resurrections.
