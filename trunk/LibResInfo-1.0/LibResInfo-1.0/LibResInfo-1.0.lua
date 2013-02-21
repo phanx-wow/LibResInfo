@@ -446,16 +446,15 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 						debug(3, "...and stopped.")
 						castStart[casterGUID], castEnd[casterGUID], castTarget[casterGUID] = nil, nil, nil
 
-						local casterUnit = unitFromGUID[stopped]
 						debug(1, ">> ResCastCancelled", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid] - 1)
 						resCasting[guid] = nil
-						callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, casterUnit, casterGUID)
+						callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, unitFromGUID[casterGUID], casterGUID)
 					else
 						debug(3, "...and finished.")
 						castStart[casterGUID], castEnd[casterGUID], castTarget[casterGUID] = nil, nil, nil
 
 						debug(1, ">> ResCastFinished", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid] - 1, "resCasting")
-						callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, casterUnit, casterGUID)
+						callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, unitFromGUID[casterGUID], casterGUID)
 
 						total.casting = total.casting + 1
 						debug(2, n, "casting, waiting for CLEU")
