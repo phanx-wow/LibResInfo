@@ -16,7 +16,7 @@ Things that can't be done:
   when the res spell was cast.
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 0
+local DEBUG_LEVEL = 2
 local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
@@ -414,7 +414,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 					end
 					local casterUnit = unitFromGUID[casterGUID]
 					debug(1, ">> ResCastStarted", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "DIFF", now - startTime, "#", resCasting[guid])
-					callbacks:Fire("LibResInfo_ResCastStarted", unit, guid, casterUnit, casterGUID, now - startTime)
+					callbacks:Fire("LibResInfo_ResCastStarted", unit, guid, casterUnit, casterGUID, castEnd[casterGUID])
 					found = true
 				end
 			end
@@ -427,7 +427,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 					if targetGUID == guid then
 						local casterUnit = unitFromGUID[casterGUID]
 						castTarget[casterGUID], castEnd[casterGUID] = nil, nil
-						debug(1, ">> ResCastFinished", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid])
+						debug(1, ">> ResCastFinished", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid], "hasRes")
 						callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, casterUnit, casterGUID)
 					end
 					total.casting = total.casting + 1
@@ -444,29 +444,25 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 					debug(3, nameFromGUID[casterGUID], "was casting...")
 					if castStart[casterGUID] then
 						debug(3, "...and stopped.")
-						stopped = casterGUID
+						castStart[casterGUID], castEnd[casterGUID], castTarget[casterGUID] = nil, nil, nil
+
+						local casterUnit = unitFromGUID[stopped]
+						debug(1, ">> ResCastCancelled", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid] - 1)
+						resCasting[guid] = nil
+						callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, casterUnit, casterGUID)
 					else
 						debug(3, "...and finished.")
-						finished = casterGUID
+						castStart[casterGUID], castEnd[casterGUID], castTarget[casterGUID] = nil, nil, nil
+
+						debug(1, ">> ResCastFinished", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid] - 1, "resCasting")
+						callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, casterUnit, casterGUID)
+
+						total.casting = total.casting + 1
+						debug(2, n, "casting, waiting for CLEU")
+						self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 					end
-					castStart[casterGUID], castEnd[casterGUID], castTarget[casterGUID] = nil, nil, nil
 					break
 				end
-			end
-
-			if stopped then
-				local casterUnit = unitFromGUID[stopped]
-				debug(1, ">> ResCastCancelled", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid] - 1)
-				resCasting[guid] = nil
-				callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, casterUnit, stopped)
-
-			elseif finished then
-				debug(1, ">> ResCastFinished", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid] - 1)
-				callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, casterUnit, casterGUID)
-
-				total.casting = total.casting + 1
-				debug(2, n, "casting, waiting for CLEU")
-				self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 			end
 		end
 	end
