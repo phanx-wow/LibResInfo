@@ -485,7 +485,7 @@ function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 			for targetGUID, targetUnit in pairs(unitFromGUID) do
 				if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and UnitIsVisible(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
 					debug(1, ">> ResCastStarted", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
-					callbacks:Fire("LibResInfo_ResCastStarted", targetGUID, targetUnit, unit, guid, endTime / 1000)
+					callbacks:Fire("LibResInfo_ResCastStarted", targetUnit, targetGUID, unit, guid, endTime / 1000)
 				end
 			end
 		end
@@ -507,7 +507,7 @@ function f:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
 				for targetGUID, targetUnit in pairs(unitFromGUID) do
 					if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and UnitIsVisible(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
 						debug(1, ">> ResCastFinished", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
-						callbacks:Fire("LibResInfo_ResCastFinished", targetGUID, targetUnit, unit, guid)
+						callbacks:Fire("LibResInfo_ResCastFinished", targetUnit, targetGUID, unit, guid)
 						n = n + 1
 					end
 				end
