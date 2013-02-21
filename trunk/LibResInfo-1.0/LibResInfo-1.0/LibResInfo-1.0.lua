@@ -1,20 +1,19 @@
 --[[--------------------------------------------------------------------
 LibResInfo-1.0
 Library to provide information about resurrections in your group.
-Copyright (c) 2012 A. Kinley <addons@phanx.net>. All rights reserved.
+Copyright (c) 2012-2013 A. Kinley <addons@phanx.net>. All rights reserved.
 See the accompanying README and LICENSE files for more information.
 
 Things to do:
 * Refactor messy and redundant sections.
-* Detect when players die while Mass Res is casting, and fire ResCastStarted for them.
-* Detect when players res while Mass Res is casting, and fire ResCastStopped for them.
-* Detect resurrections being cast on group members by players who join the group while casting.
-* Detect resurrections being cast by group members on players who join the group while being resurrected.
+* Fire ResCastStarted for units who die while Mass Res is casting.
+* Fire ResCastStopped for units who res while Mass Res is casting.
 
 Things that can't be done:
 * Detect when a pending res is declined manually.
-* Detect pending resurrections when either the caster or target was not in the group when the cast completed,
-  but joined the group before the res expired.
+* Detect resurrections cast by or on players outside the group.
+* Detect pending resurrections on units who were not in the group
+  when the res spell was cast.
 ----------------------------------------------------------------------]]
 
 local DEBUG_LEVEL = 0
@@ -22,7 +21,7 @@ local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 4
+local MAJOR, MINOR = "LibResInfo-1.0", 5
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -72,7 +71,6 @@ total.casting = total.casting or 0 -- # res spells being cast
 total.pending = total.pending or 0 -- # resses available to take
 
 local ghost = lib.ghost
-
 
 if DEBUG_LEVEL > 0 then
 	LibResInfo = {
@@ -320,8 +318,8 @@ function f:GROUP_ROSTER_UPDATE()
 					resCasting[target] = nil
 				end
 				castTarget[caster] = nil
-				debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[target])
-				callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID_old[caster], caster, unitFromGUID[target], target)
+				debug(1, ">> ResCastCancelled", "on", nameFromGUID[target], "by", nameFromGUID[caster])
+				callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID[target], target, unitFromGUID_old[caster], caster)
 			elseif castMass[caster] then
 				castMass[caster] = nil
 				for guid, unit in pairs(guidFromUnit) do
@@ -331,8 +329,8 @@ function f:GROUP_ROSTER_UPDATE()
 						else
 							resCasting[guid] = nil
 						end
-						debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[guid])
-						callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID_old[caster], caster, unitFromGUID[target], target)
+						debug(1, ">> ResCastCancelled", "on", nameFromGUID[caster], "by", nameFromGUID[guid])
+						callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID[target], target, unitFromGUID_old[caster], caster)
 					end
 				end
 			end
@@ -348,13 +346,13 @@ function f:GROUP_ROSTER_UPDATE()
 				if target == castertarget then
 					resCasting[target] = nil
 					castTarget[caster], castStart[caster], castEnd[caster] = nil, nil, nil
-					debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[target])
-					callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID[caster], caster, unitFromGUID_old[target], target)
+					debug(1, ">> ResCastCancelled", "on", nameFromGUID[target], "by", nameFromGUID[caster])
+					callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID[target], target, unitFromGUID_old[caster], caster)
 				end
 			end
 			for caster in pairs(castMass) do
-				debug(1, ">> ResCastCancelled", "=>", nameFromGUID[caster], "=>", nameFromGUID[guid])
-				callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID[caster], caster, unitFromGUID_old[target], target)
+				debug(1, ">> ResCastCancelled", "on", nameFromGUID[target], "by", nameFromGUID[caster])
+				callbacks:Fire("LibResInfo_ResCastCancelled", unitFromGUID[target], target, unitFromGUID_old[caster], caster)
 			end
 		end
 	end
@@ -366,7 +364,7 @@ function f:GROUP_ROSTER_UPDATE()
 			debug(2, nameFromGUID[target], "left while pending.")
 			resPending[target] = nil
 			total.pending = total.pending - 1
-			debug(1, ">> ResExpired", "=>", nameFromGUID[target])
+			debug(1, ">> ResExpired", "on", nameFromGUID[target])
 			callbacks:Fire("LibResInfo_ResExpired", unitFromGUID_old[target], target)
 		end
 	end
@@ -415,8 +413,8 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 						resCasting[guid] = 1
 					end
 					local casterUnit = unitFromGUID[casterGUID]
-					debug(1, ">> ResCastStarted", nameFromGUID[casterGUID], "=>", nameFromGUID[guid], "DIFF", now - startTime, "#", resCasting[guid])
-					callbacks:Fire("LibResInfo_ResCastStarted", casterUnit, casterGUID, now - startTime, unit, guid)
+					debug(1, ">> ResCastStarted", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "DIFF", now - startTime, "#", resCasting[guid])
+					callbacks:Fire("LibResInfo_ResCastStarted", unit, guid, casterUnit, casterGUID, now - startTime)
 					found = true
 				end
 			end
@@ -429,8 +427,8 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 					if targetGUID == guid then
 						local casterUnit = unitFromGUID[casterGUID]
 						castTarget[casterGUID], castEnd[casterGUID] = nil, nil
-						debug(1, ">> ResCastFinished", nameFromGUID[casterGUID], "=>", nameFromGUID[guid], "#", resCasting[guid])
-						callbacks:Fire("LibResInfo_ResCastFinished", casterUnit, casterGUID, unit, guid)
+						debug(1, ">> ResCastFinished", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid])
+						callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, casterUnit, casterGUID)
 					end
 					total.casting = total.casting + 1
 					debug(3, n, "casting, waiting for CLEU.")
@@ -458,13 +456,13 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 
 			if stopped then
 				local casterUnit = unitFromGUID[stopped]
-				debug(1, ">> ResCastCancelled", nameFromGUID[casterGUID], "=>", nameFromGUID[guid], "#", resCasting[guid] - 1)
+				debug(1, ">> ResCastCancelled", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid] - 1)
 				resCasting[guid] = nil
-				callbacks:Fire("LibResInfo_ResCastCancelled", casterUnit, stopped, unit, guid)
+				callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, casterUnit, stopped)
 
 			elseif finished then
-				debug(1, ">> ResCastFinished", nameFromGUID[casterGUID], "=>", nameFromGUID[guid], "#", resCasting[guid] - 1)
-				callbacks:Fire("LibResInfo_ResCastFinished", casterUnit, casterGUID, unit, guid)
+				debug(1, ">> ResCastFinished", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid] - 1)
+				callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, casterUnit, casterGUID)
 
 				total.casting = total.casting + 1
 				debug(2, n, "casting, waiting for CLEU")
@@ -491,8 +489,8 @@ function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 			castMass[guid] = true
 			for targetGUID, targetUnit in pairs(unitFromGUID) do
 				if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and UnitIsVisible(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
-					debug(1, ">> ResCastStarted", nameFromGUID[guid], "=>", nameFromGUID[targetGUID])
-					callbacks:Fire("LibResInfo_ResCastStarted", unit, guid, endTime / 1000, targetGUID, targetUnit)
+					debug(1, ">> ResCastStarted", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
+					callbacks:Fire("LibResInfo_ResCastStarted", targetGUID, targetUnit, unit, guid, endTime / 1000)
 				end
 			end
 		end
@@ -513,8 +511,8 @@ function f:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
 
 				for targetGUID, targetUnit in pairs(unitFromGUID) do
 					if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and UnitIsVisible(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
-						debug(1, ">> ResCastFinished", nameFromGUID[guid], "=>", nameFromGUID[targetGUID])
-						callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, targetGUID, targetUnit)
+						debug(1, ">> ResCastFinished", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
+						callbacks:Fire("LibResInfo_ResCastFinished", targetGUID, targetUnit, unit, guid)
 						n = n + 1
 					end
 				end
@@ -541,8 +539,8 @@ function f:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 					local targetUnit = unitFromGUID[targetGUID]
 					castStart[guid], castEnd[guid], castTarget[guid] = nil, nil
 					resCasting[targetGUID] = n - 1
-					debug(1, ">> ResCastCancelled", nameFromGUID[guid], "=>", nameFromGUID[targetGUID])
-					callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, targetUnit, targetGUID)
+					debug(1, ">> ResCastCancelled", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
+					callbacks:Fire("LibResInfo_ResCastCancelled", targetUnit, targetGUID, unit, guid)
 				else
 					debug(3, "Waiting for IRC.")
 				end
@@ -557,8 +555,8 @@ function f:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 						else
 							resCasting[targetGUID] = nil
 						end
-						debug(1, ">> ResCastCancelled", nameFromGUID[guid], "=>", nameFromGUID[targetGUID])
-						callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, targetGUID, targetUnit)
+						debug(1, ">> ResCastCancelled", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
+						callbacks:Fire("LibResInfo_ResCastCancelled", targetUnit, targetGUID, unit, guid)
 					end
 				end
 			end
@@ -621,7 +619,7 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 					debug(3, total.pending, "pending, timer already running")
 				end
 
-				debug(1, ">> ResPending", sourceName, "=>", destName)
+				debug(1, ">> ResPending", "on", destName, "by", sourceName)
 				callbacks:Fire("LibResInfo_ResPending", destUnit, destGUID, now + RESURRECT_PENDING_TIME)
 			end
 		end
