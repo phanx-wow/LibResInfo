@@ -16,12 +16,12 @@ Things that can't be done:
   when the res spell was cast.
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 0
+local DEBUG_LEVEL = 2
 local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 5
+local MAJOR, MINOR = "LibResInfo-1.0", 6
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -145,7 +145,6 @@ end
 ------------------------------------------------------------------------
 
 function lib:UnitHasIncomingRes(unit)
-	debug(2, "UnitHasIncomingRes", unit)
 	if type(unit) == "string" then
 		local guid
 		if strmatch(unit, "^0x") then
@@ -156,9 +155,8 @@ function lib:UnitHasIncomingRes(unit)
 			unit = unitFromGUID[guid]
 		end
 		if guid and unit and UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) then
-			debug(3, unit, guid, nameFromGUID[guid])
 			if resPending[guid] then
-				debug(3, "PENDING", resPending[guid])
+				debug(2, "UnitHasIncomingRes", nameFromGUID[guid], "PENDING", resPending[guid])
 				return "PENDING", resPending[guid]
 			else
 				local firstCaster, firstEnd
@@ -170,7 +168,7 @@ function lib:UnitHasIncomingRes(unit)
 						end
 					end
 				end
-				if UnitIsVisible(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
+				if not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
 					for casterGUID in pairs(castMass) do
 						local endTime = castEnd[casterGUID]
 						if endTime and (not firstEnd or endTime < firstEnd) then
@@ -179,13 +177,13 @@ function lib:UnitHasIncomingRes(unit)
 					end
 				end
 				if firstCaster and firstEnd then
-					debug(3, "CASTING", firstEnd, unitFromGUID[firstCaster], firstCaster)
+					debug(2, "UnitHasIncomingRes", nameFromGUID[guid], "CASTING", firstEnd, unitFromGUID[firstCaster], firstCaster)
 					return "CASTING", firstEnd, unitFromGUID[firstCaster], firstCaster
 				end
 			end
 		end
+		debug(3, "UnitHasIncomingRes", nameFromGUID[guid], "nil")
 	end
-	debug(3, "nil")
 end
 
 function lib:UnitIsCastingRes(unit)
@@ -200,7 +198,7 @@ function lib:UnitIsCastingRes(unit)
 			unit = unitFromGUID[guid]
 		end
 		if guid and unit then
-			debug(3, unit, guid, nameFromGUID[guid])
+			debug(4, unit, guid, nameFromGUID[guid])
 			local isFirst, targetGUID, endTime = true, castTarget[guid], castEnd[guid]
 			if targetGUID then
 				if resPending[targetGUID] then
@@ -219,16 +217,16 @@ function lib:UnitIsCastingRes(unit)
 						end
 					end
 				end
-				debug(3, endTime, unitFromGUID[targetGUID], targetGUID, isFirst)
+				debug(2, endTime, unitFromGUID[targetGUID], targetGUID, isFirst)
 				return endTime, unitFromGUID[targetGUID], targetGUID, isFirst
 
 			elseif castMass[guid] then
-				debug(3, endTime)
+				debug(42, endTime)
 				return endTime
 			end
 		end
 	end
-	debug(3, "nil")
+	debug(4, "nil")
 end
 
 ------------------------------------------------------------------------
@@ -236,7 +234,7 @@ end
 local unitFromGUID_old, guidFromUnit_old = {}, {}
 
 function f:GROUP_ROSTER_UPDATE()
-	debug(2, "GROUP_ROSTER_UPDATE")
+	debug(3, "GROUP_ROSTER_UPDATE")
 
 	wipe(guidFromUnit_old)
 	wipe(unitFromGUID_old)
@@ -250,7 +248,7 @@ function f:GROUP_ROSTER_UPDATE()
 	end
 
 	if IsInRaid() then
-		debug(3, "raid")
+		debug(4, "raid")
 		local unit, guid
 		for i = 1, GetNumGroupMembers() do
 			unit = "raid"..i
@@ -282,7 +280,7 @@ function f:GROUP_ROSTER_UPDATE()
 		end
 
 		if IsInGroup() then
-			debug(3, "party")
+			debug(4, "party")
 			for i = 1, GetNumGroupMembers() - 1 do
 				unit = "party"..i
 				guid = UnitGUID(unit)
@@ -300,7 +298,7 @@ function f:GROUP_ROSTER_UPDATE()
 				end
 			end
 		else
-			debug(3, "solo")
+			debug(4, "solo")
 		end
 	end
 
@@ -308,7 +306,7 @@ function f:GROUP_ROSTER_UPDATE()
 	-- Find who they were casting on and cancel it.
 	for caster in pairs(castEnd) do
 		if not unitFromGUID[caster] then
-			debug(3, nameFromGUID[caster], "left while casting.")
+			debug(4, nameFromGUID[caster], "left while casting.")
 			castStart[caster], castEnd[caster] = nil, nil
 			local target = castTarget[caster]
 			if target then
@@ -323,7 +321,7 @@ function f:GROUP_ROSTER_UPDATE()
 			elseif castMass[caster] then
 				castMass[caster] = nil
 				for guid, unit in pairs(guidFromUnit) do
-					if UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) and UnitIsVisible(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
+					if UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
 						if resCasting[guid] > 0 then
 							resCasting[guid] = resCasting[guid] - 1
 						else
@@ -341,7 +339,7 @@ function f:GROUP_ROSTER_UPDATE()
 	-- Find the cast and cancel it.
 	for target, n in pairs(resCasting) do
 		if not unitFromGUID[target] then
-			debug(3, nameFromGUID[target], "left while incoming.")
+			debug(4, nameFromGUID[target], "left while incoming.")
 			for caster, castertarget in pairs(castTarget) do
 				if target == castertarget then
 					resCasting[target] = nil
@@ -361,7 +359,7 @@ function f:GROUP_ROSTER_UPDATE()
 	-- Find the res and cancel it.
 	for target in pairs(resPending) do
 		if not unitFromGUID[target] then
-			debug(2, nameFromGUID[target], "left while pending.")
+			debug(3, nameFromGUID[target], "left while pending.")
 			resPending[target] = nil
 			total.pending = total.pending - 1
 			debug(1, ">> ResExpired", "on", nameFromGUID[target])
@@ -370,7 +368,7 @@ function f:GROUP_ROSTER_UPDATE()
 	end
 
 	-- Check events
-	debug(2, "# pending:", total.pending)
+	debug(3, "# pending:", total.pending)
 	if total.pending == 0 then
 		self:UnregisterEvent("UNIT_HEALTH")
 		self:Hide()
@@ -380,7 +378,7 @@ function f:GROUP_ROSTER_UPDATE()
 	for _, n in pairs(resCasting) do
 		most = max(n, most)
 	end
-	debug(2, "highest # casting:", most)
+	debug(3, "highest # casting:", most)
 	if most < 2 then
 		self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 	end
@@ -398,7 +396,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 	if guidFromUnit[unit] then
 		local guid = UnitGUID(unit)
 		local hasRes = UnitHasIncomingResurrection(unit)
-		debug(2, "INCOMING_RESURRECT_CHANGED", "=>", name, "=>", hasRes)
+		debug(3, "INCOMING_RESURRECT_CHANGED", "=>", name, "=>", hasRes)
 
 		if hasRes then
 			local now, found = GetTime()
@@ -419,7 +417,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 				end
 			end
 			if not found then
-				debug(3, "No new cast found.")
+				debug(4, "No new cast found.")
 			end
 			for casterGUID, endTime in pairs(castEnd) do
 				if endTime - now < 10 and not castStart[casterGUID] and not castMass[casterGUID] then -- time in ms between cast end and res loss
@@ -427,11 +425,11 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 					if targetGUID == guid then
 						local casterUnit = unitFromGUID[casterGUID]
 						castTarget[casterGUID], castEnd[casterGUID] = nil, nil
-						debug(1, ">> ResCastFinished", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid], "hasRes")
+						debug(1, ">> ResCastFinished", "on", unit, nameFromGUID[guid], "by", casterUnit, nameFromGUID[casterGUID], "#", resCasting[guid], "hasRes")
 						callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, casterUnit, casterGUID)
 					end
 					total.casting = total.casting + 1
-					debug(3, n, "casting, waiting for CLEU.")
+					debug(4, n, "casting, waiting for CLEU.")
 					self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 				end
 			end
@@ -441,23 +439,23 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 			local finished, stopped
 			for casterGUID, targetGUID in pairs(castTarget) do
 				if targetGUID == guid then
-					debug(3, nameFromGUID[casterGUID], "was casting...")
+					debug(4, nameFromGUID[casterGUID], "was casting...")
 					if castStart[casterGUID] then
-						debug(3, "...and stopped.")
+						debug(4, "...and stopped.")
 						castStart[casterGUID], castEnd[casterGUID], castTarget[casterGUID] = nil, nil, nil
 
 						debug(1, ">> ResCastCancelled", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid] - 1)
 						resCasting[guid] = nil
 						callbacks:Fire("LibResInfo_ResCastCancelled", unit, guid, unitFromGUID[casterGUID], casterGUID)
 					else
-						debug(3, "...and finished.")
+						debug(4, "...and finished.")
 						castStart[casterGUID], castEnd[casterGUID], castTarget[casterGUID] = nil, nil, nil
 
 						debug(1, ">> ResCastFinished", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid] - 1, "resCasting")
 						callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, unitFromGUID[casterGUID], casterGUID)
 
 						total.casting = total.casting + 1
-						debug(2, n, "casting, waiting for CLEU")
+						debug(3, n, "casting, waiting for CLEU")
 						self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 					end
 					break
@@ -472,10 +470,10 @@ end
 function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 	if guidFromUnit[unit] and resSpells[spellID] then
 		local guid = UnitGUID(unit)
-		debug(2, event, "=>", nameFromGUID[guid], "=>", spellName)
+		debug(3, event, "=>", nameFromGUID[guid], "=>", spellName)
 
 		local _, _, _, _, startTime, endTime = UnitCastingInfo(unit)
-		debug(3, "UnitCastingInfo =>", spellID, spellName, startTime / 1000, endTime / 1000)
+		debug(4, "UnitCastingInfo =>", spellID, spellName, startTime / 1000, endTime / 1000)
 
 		castStart[guid] = startTime / 1000
 		castEnd[guid] = endTime / 1000
@@ -483,7 +481,7 @@ function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 		if spellID == 83968 then -- Mass Resurrection
 			castMass[guid] = true
 			for targetGUID, targetUnit in pairs(unitFromGUID) do
-				if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and UnitIsVisible(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
+				if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
 					debug(1, ">> ResCastStarted", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
 					callbacks:Fire("LibResInfo_ResCastStarted", targetUnit, targetGUID, unit, guid, endTime / 1000)
 				end
@@ -496,7 +494,7 @@ function f:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
 	if guidFromUnit[unit] and resSpells[spellID] then
 		local guid = UnitGUID(unit)
 		if castStart[guid] then
-			debug(2, event, "=>", nameFromGUID[guid], "=>", spellName)
+			debug(3, event, "=>", nameFromGUID[guid], "=>", spellName)
 			castStart[guid] = nil
 
 			if castMass[guid] then -- Mass Resurrection
@@ -505,7 +503,7 @@ function f:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
 				local n = total.casting
 
 				for targetGUID, targetUnit in pairs(unitFromGUID) do
-					if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and UnitIsVisible(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
+					if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
 						debug(1, ">> ResCastFinished", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
 						callbacks:Fire("LibResInfo_ResCastFinished", targetUnit, targetGUID, unit, guid)
 						n = n + 1
@@ -513,7 +511,7 @@ function f:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
 				end
 
 				if n > 0 then
-					debug(3, n, "casting, waiting for CLEU.")
+					debug(4, n, "casting, waiting for CLEU.")
 					self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 				end
 			end
@@ -525,7 +523,7 @@ function f:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 	if guidFromUnit[unit] and resSpells[spellID] then
 		local guid = UnitGUID(unit)
 		if castStart[guid] then
-			debug(2, event, "=>", nameFromGUID[guid], "=>", spellName)
+			debug(3, event, "=>", nameFromGUID[guid], "=>", spellName)
 			local targetGUID = castTarget[guid]
 			if targetGUID then
 				local n = resCasting[targetGUID]
@@ -537,7 +535,7 @@ function f:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 					debug(1, ">> ResCastCancelled", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
 					callbacks:Fire("LibResInfo_ResCastCancelled", targetUnit, targetGUID, unit, guid)
 				else
-					debug(3, "Waiting for IRC.")
+					debug(4, "Waiting for IRC.")
 				end
 
 			elseif castMass[guid] then -- Mass Resurrection
@@ -568,11 +566,11 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 		local destUnit = unitFromGUID[destGUID]
 		if destUnit then
 			local now = GetTime()
-			debug(2, combatEvent, "=>", sourceName, "=>", spellName, "=>", destName)
+			debug(3, combatEvent, "=>", sourceName, "=>", spellName, "=>", destName)
 
 			local casting = resCasting[destGUID]
 			if casting or castMass[sourceGUID] then
-				debug(3, "yes")
+				debug(4, "yes")
 
 				if casting and casting > 1 then
 					resCasting[destGUID] = casting - 1
@@ -585,7 +583,7 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 
 				total.casting = total.casting - 1
 				if total.casting == 0 then
-					debug(3, "0 casting, unregister CLEU")
+					debug(4, "0 casting, unregister CLEU")
 					self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 				end
 
@@ -599,22 +597,22 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 					if n == 0 then
 						castMass[sourceGUID] = nil
 					end
-					debug(3, n, "mass targets left")
+					debug(4, n, "mass targets left")
 				end
 
 				ghost[destUnit] = UnitIsGhost(destUnit)
 
 				if new then
 					total.pending = total.pending + 1
-					debug(3, total.pending, "pending, start timer, register UNIT_HEALTH/AURA")
+					debug(4, total.pending, "pending, start timer, register UNIT_HEALTH/AURA")
 					self:RegisterEvent("UNIT_HEALTH")
 					self:RegisterEvent("UNIT_AURA")
 					self:Show()
 				else
-					debug(3, total.pending, "pending, timer already running")
+					debug(4, total.pending, "pending, timer already running")
 				end
 
-				debug(1, ">> ResPending", "on", destName, "by", sourceName)
+				debug(1, ">> ResPending", "on", strmatch(destName, "[^%-]+"), "by", strmatch(sourceName, "[^%-]+"))
 				callbacks:Fire("LibResInfo_ResPending", destUnit, destGUID, now + RESURRECT_PENDING_TIME)
 			end
 		end
@@ -627,7 +625,7 @@ function f:UNIT_HEALTH(event, unit)
 	local guid = guidFromUnit[unit]
 	if guidFromUnit[unit] then
 		if resPending[guid] then
-			debug(2, event, nameFromGUID[guid], "Dead", UnitIsDead(unit), "Ghost", UnitIsGhost(unit), "Offline", not UnitIsConnected(unit))
+			debug(3, event, nameFromGUID[guid], "Dead", UnitIsDead(unit), "Ghost", UnitIsGhost(unit), "Offline", not UnitIsConnected(unit))
 
 			local lost
 
@@ -650,7 +648,7 @@ function f:UNIT_HEALTH(event, unit)
 
 				total.pending = total.pending - 1
 				if total.pending == 0 then
-					debug(3, "0 pending, unregister UNIT_HEALTH/AURA")
+					debug(4, "0 pending, unregister UNIT_HEALTH/AURA")
 					self:UnregisterEvent("UNIT_AURA")
 					self:UnregisterEvent("UNIT_HEALTH")
 				end
@@ -670,14 +668,14 @@ local INTERVAL = 0.5
 f:SetScript("OnUpdate", function(self, elapsed)
 	timer = timer + elapsed
 	if timer >= INTERVAL then
-		debug(5, "timer update")
+		debug(6, "timer update")
 		local now = GetTime()
 		for guid, expiry in pairs(resPending) do
 			if expiry - now < INTERVAL then -- will expire before next update
 				local unit = unitFromGUID[guid]
 				resPending[guid] = nil
 				debug(1, ">> ResExpired", nameFromGUID[guid])
-				callbacks:Fire("LibResInfo_ResExpired", unit, guid)
+				callbacks:Fire("LibResInfo_ResExpired", unit, guid, true)
 
 				total.pending = total.pending - 1
 				if total.pending == 0 then
@@ -691,11 +689,11 @@ f:SetScript("OnUpdate", function(self, elapsed)
 end)
 
 f:SetScript("OnShow", function()
-	debug(2, "timer start")
+	debug(4, "timer start")
 end)
 
 f:SetScript("OnHide", function()
-	debug(2, "timer stop")
+	debug(4, "timer stop")
 	timer = 0
 end)
 
