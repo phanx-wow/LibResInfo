@@ -16,7 +16,7 @@ Things that can't be done:
   when the res spell was cast.
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 2
+local DEBUG_LEVEL = 0
 local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
@@ -187,7 +187,6 @@ function lib:UnitHasIncomingRes(unit)
 end
 
 function lib:UnitIsCastingRes(unit)
-	debug(2, "UnitIsCastingRes", unit)
 	if type(unit) == "string" then
 		local guid
 		if strmatch(unit, "^0x") then
@@ -217,16 +216,22 @@ function lib:UnitIsCastingRes(unit)
 						end
 					end
 				end
-				debug(2, endTime, unitFromGUID[targetGUID], targetGUID, isFirst)
+				debug(2, "UnitIsCastingRes", unit, endTime, unitFromGUID[targetGUID], targetGUID, isFirst)
 				return endTime, unitFromGUID[targetGUID], targetGUID, isFirst
 
 			elseif castMass[guid] then
-				debug(42, endTime)
-				return endTime
+				for k in pairs(castMass) do
+					if k ~= guid and castEnd[k] < endTime then
+						isFirst = nil
+						break
+					end
+				end
+				debug(2, "UnitIsCastingRes", unit, endTime, nil, nil, isFirst)
+				return endTime, nil, nil, isFirst
 			end
 		end
 	end
-	debug(4, "nil")
+	debug(2, "UnitIsCastingRes", unit, "nil")
 end
 
 ------------------------------------------------------------------------
@@ -396,7 +401,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 	if guidFromUnit[unit] then
 		local guid = UnitGUID(unit)
 		local hasRes = UnitHasIncomingResurrection(unit)
-		debug(3, "INCOMING_RESURRECT_CHANGED", "=>", name, "=>", hasRes)
+		debug(3, "INCOMING_RESURRECT_CHANGED", "=>", nameFromGUID[guid], "=>", hasRes)
 
 		if hasRes then
 			local now, found = GetTime()
@@ -539,7 +544,7 @@ function f:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 				end
 
 			elseif castMass[guid] then -- Mass Resurrection
-				castStart[guid], castEnd[guid] = nil, nil
+				castStart[guid], castEnd[guid], castMass[guid] = nil, nil, nil
 				for targetGUID, targetUnit in pairs(unitFromGUID) do
 					if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
 						local n = resCasting[targetGUID]
