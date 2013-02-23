@@ -16,12 +16,12 @@ Things that can't be done:
   when the res spell was cast.
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 0
+local DEBUG_LEVEL = 2 -- put back to 0
 local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 6
+local MAJOR, MINOR = "LibResInfo-1.0", 7
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -73,20 +73,7 @@ total.pending = total.pending or 0 -- # resses available to take
 local ghost = lib.ghost
 
 if DEBUG_LEVEL > 0 then
-	LibResInfo = {
-		unitFromGUID = unitFromGUID,
-
-		castStart = castStart,
-		castEnd = castEnd,
-		castTarget = castTarget,
-		castMass = castMass,
-
-		resCasting = resCasting,
-		resPending = resPending,
-
-		total = total,
-		ghost = ghost,
-	}
+	LibResInfo = lib
 end
 
 ------------------------------------------------------------------------
@@ -129,7 +116,7 @@ f:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 
 local function debug(level, text, ...)
 	if level <= DEBUG_LEVEL then
-		if (...) then
+		if select("#", ...) > 0 then
 			if type(text) == "string" and strfind(text, "%%[dfqsx%d%.]") then
 				text = format(text, ...)
 			else
@@ -177,7 +164,7 @@ function lib:UnitHasIncomingRes(unit)
 					end
 				end
 				if firstCaster and firstEnd then
-					debug(2, "UnitHasIncomingRes", nameFromGUID[guid], "CASTING", firstEnd, unitFromGUID[firstCaster], firstCaster)
+					debug(2, "UnitHasIncomingRes", nameFromGUID[guid], "CASTING", firstEnd, nameFromGUID[firstCaster])
 					return "CASTING", firstEnd, unitFromGUID[firstCaster], firstCaster
 				end
 			end
@@ -216,7 +203,7 @@ function lib:UnitIsCastingRes(unit)
 						end
 					end
 				end
-				debug(2, "UnitIsCastingRes", unit, endTime, unitFromGUID[targetGUID], targetGUID, isFirst)
+				debug(2, "UnitIsCastingRes", nameFromGUID[guid], floor(endTime), nameFromGUID[targetGUID], isFirst)
 				return endTime, unitFromGUID[targetGUID], targetGUID, isFirst
 
 			elseif castMass[guid] then
@@ -226,12 +213,14 @@ function lib:UnitIsCastingRes(unit)
 						break
 					end
 				end
-				debug(2, "UnitIsCastingRes", unit, endTime, nil, nil, isFirst)
+				debug(2, "UnitIsCastingRes", nameFromGUID[guid], floor(endTime), nil, nil, isFirst)
 				return endTime, nil, nil, isFirst
 			end
+			return debug(2, "UnitIsCastingRes", nameFromGUID[guid], "nil") -- put back to 3
 		end
+		return debug(2, "UnitIsCastingRes", unit, guid, "INVALID") -- put back to 3
 	end
-	debug(2, "UnitIsCastingRes", unit, "nil")
+	debug(2, "UnitIsCastingRes", tostring(unit), "INVALID", type(unit)) -- put back to 3
 end
 
 ------------------------------------------------------------------------
