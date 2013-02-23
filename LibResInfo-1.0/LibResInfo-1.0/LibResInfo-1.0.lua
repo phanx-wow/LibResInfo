@@ -16,7 +16,7 @@ Things that can't be done:
   when the res spell was cast.
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 2 -- put back to 0
+local DEBUG_LEVEL = 0
 local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
@@ -143,7 +143,7 @@ function lib:UnitHasIncomingRes(unit)
 		end
 		if guid and unit and UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) then
 			if resPending[guid] then
-				debug(2, "UnitHasIncomingRes", nameFromGUID[guid], "PENDING", resPending[guid])
+				debug(2, "UnitHasIncomingRes", nameFromGUID[guid], "PENDING")
 				return "PENDING", resPending[guid]
 			else
 				local firstCaster, firstEnd
@@ -164,7 +164,7 @@ function lib:UnitHasIncomingRes(unit)
 					end
 				end
 				if firstCaster and firstEnd then
-					debug(2, "UnitHasIncomingRes", nameFromGUID[guid], "CASTING", firstEnd, nameFromGUID[firstCaster])
+					debug(2, "UnitHasIncomingRes", nameFromGUID[guid], "CASTING", nameFromGUID[firstCaster])
 					return "CASTING", firstEnd, unitFromGUID[firstCaster], firstCaster
 				end
 			end
@@ -203,7 +203,7 @@ function lib:UnitIsCastingRes(unit)
 						end
 					end
 				end
-				debug(2, "UnitIsCastingRes", nameFromGUID[guid], floor(endTime), nameFromGUID[targetGUID], isFirst)
+				debug(2, "UnitIsCastingRes", nameFromGUID[guid], nameFromGUID[targetGUID], isFirst)
 				return endTime, unitFromGUID[targetGUID], targetGUID, isFirst
 
 			elseif castMass[guid] then
@@ -213,14 +213,14 @@ function lib:UnitIsCastingRes(unit)
 						break
 					end
 				end
-				debug(2, "UnitIsCastingRes", nameFromGUID[guid], floor(endTime), nil, nil, isFirst)
+				debug(2, "UnitIsCastingRes", nameFromGUID[guid], "MASS", isFirst)
 				return endTime, nil, nil, isFirst
 			end
-			return debug(2, "UnitIsCastingRes", nameFromGUID[guid], "nil") -- put back to 3
+			return debug(3, "UnitIsCastingRes", nameFromGUID[guid], "NIL")
 		end
-		return debug(2, "UnitIsCastingRes", unit, guid, "INVALID") -- put back to 3
+		return debug(3, "UnitIsCastingRes", unit, "INVALID")
 	end
-	debug(2, "UnitIsCastingRes", tostring(unit), "INVALID", type(unit)) -- put back to 3
+	debug(3, "UnitIsCastingRes", tostring(unit), "INVALID", type(unit))
 end
 
 ------------------------------------------------------------------------
@@ -390,7 +390,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 	if guidFromUnit[unit] then
 		local guid = UnitGUID(unit)
 		local hasRes = UnitHasIncomingResurrection(unit)
-		debug(3, "INCOMING_RESURRECT_CHANGED", "=>", nameFromGUID[guid], "=>", hasRes)
+		debug(3, "INCOMING_RESURRECT_CHANGED", nameFromGUID[guid], hasRes)
 
 		if hasRes then
 			local now, found = GetTime()
@@ -405,7 +405,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 						resCasting[guid] = 1
 					end
 					local casterUnit = unitFromGUID[casterGUID]
-					debug(1, ">> ResCastStarted", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "DIFF", now - startTime, "#", resCasting[guid])
+					debug(1, ">> ResCastStarted", "on", nameFromGUID[guid], "by", nameFromGUID[casterGUID], "DIFF", floor(now - startTime * 100) / 100, "#", resCasting[guid])
 					callbacks:Fire("LibResInfo_ResCastStarted", unit, guid, casterUnit, casterGUID, castEnd[casterGUID])
 					found = true
 				end
@@ -419,7 +419,7 @@ function f:INCOMING_RESURRECT_CHANGED(event, unit)
 					if targetGUID == guid then
 						local casterUnit = unitFromGUID[casterGUID]
 						castTarget[casterGUID], castEnd[casterGUID] = nil, nil
-						debug(1, ">> ResCastFinished", "on", unit, nameFromGUID[guid], "by", casterUnit, nameFromGUID[casterGUID], "#", resCasting[guid], "hasRes")
+						debug(1, ">> ResCastFinished", "on",nameFromGUID[guid], "by", nameFromGUID[casterGUID], "#", resCasting[guid], "hasRes")
 						callbacks:Fire("LibResInfo_ResCastFinished", unit, guid, casterUnit, casterGUID)
 					end
 					total.casting = total.casting + 1
@@ -467,7 +467,7 @@ function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 		debug(3, event, "=>", nameFromGUID[guid], "=>", spellName)
 
 		local _, _, _, _, startTime, endTime = UnitCastingInfo(unit)
-		debug(4, "UnitCastingInfo =>", spellID, spellName, startTime / 1000, endTime / 1000)
+		debug(4, "UnitCastingInfo =>", spellID, spellName, floor(startTime / 1000), floor(endTime / 1000))
 
 		castStart[guid] = startTime / 1000
 		castEnd[guid] = endTime / 1000
