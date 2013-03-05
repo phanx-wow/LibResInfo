@@ -1,4 +1,4 @@
-## Interface: 50100
+## Interface: 50200
 ## Version: rwowi:revision
 
 ## Title: Lib: ResInfo-1.0
