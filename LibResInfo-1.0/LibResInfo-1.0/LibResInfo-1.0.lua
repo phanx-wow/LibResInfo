@@ -16,7 +16,7 @@ Things that can't be done:
   when the res spell was cast.
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 4
+local DEBUG_LEVEL = 0
 local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
