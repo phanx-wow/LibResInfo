@@ -16,12 +16,12 @@ Things that can't be done:
   when the res spell was cast.
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 0
+local DEBUG_LEVEL = 1
 local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 8
+local MAJOR, MINOR = "LibResInfo-1.0", 9
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -300,10 +300,13 @@ function f:GROUP_ROSTER_UPDATE()
 	for caster in pairs(castEnd) do
 		if not unitFromGUID[caster] then
 			debug(4, nameFromGUID[caster], "left while casting on", nameFromGUID[target])
+			local cS, cE = castStart[caster] or 0, castEnd[caster] or 0
 			castStart[caster], castEnd[caster] = nil, nil
 			local target = castTarget[caster]
 			if target then
-				if resCasting[target] > 1 then
+				if not resCasting[target] then
+					print("LibResInfo: Missing cast count on", unitFromGUID_old[target], nameFromGUID[target], "by", unitFromGUID_old[caster], nameFromGUID[caster], floor(cS*100+0.5)/100, "=>", floor(cE*100+0.5)/100)
+				elseif resCasting[target] > 1 then
 					resCasting[target] = resCasting[target] - 1
 				else
 					resCasting[target] = nil
@@ -622,24 +625,24 @@ function f:UNIT_HEALTH(event, unit)
 		if resPending[guid] then
 			debug(3, event, nameFromGUID[guid], "Dead", UnitIsDead(unit), "Ghost", UnitIsGhost(unit), "Offline", not UnitIsConnected(unit))
 
-			local lost
+			local callback
 
 			if not UnitIsConnected(unit) then
-				lost = "LibResInfo_ResExpired"
+				callback = "LibResInfo_ResExpired"
 
 			elseif UnitIsGhost(unit) and not ghost[guid] then
 				ghost[guid] = true
-				lost = "LibResInfo_ResExpired"
+				callback = "LibResInfo_ResExpired"
 
 			elseif not UnitIsDead(unit) then
 				ghost[guid] = nil
-				lost = "LibResInfo_ResUsed"
+				callback = "LibResInfo_ResUsed"
 			end
 
-			if lost then
+			if callback then
 				resPending[guid] = nil
-				debug(1, ">>", lost, nameFromGUID[guid])
-				callbacks:Fire(lost, unit, guid)
+				debug(1, ">>", callback, nameFromGUID[guid])
+				callbacks:Fire(callback, unit, guid)
 
 				total.pending = total.pending - 1
 				if total.pending == 0 then
