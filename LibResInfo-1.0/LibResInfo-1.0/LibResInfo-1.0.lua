@@ -305,7 +305,7 @@ function f:GROUP_ROSTER_UPDATE()
 			local target = castTarget[caster]
 			if target then
 				if not resCasting[target] then
-					print("LibResInfo: Missing cast count on", unitFromGUID_old[target], nameFromGUID[target], "by", unitFromGUID_old[caster], nameFromGUID[caster], floor(cS*100+0.5)/100, "=>", floor(cE*100+0.5)/100)
+					debug(1, "LibResInfo: Missing cast count on", unitFromGUID_old[target], nameFromGUID[target], "by", unitFromGUID_old[caster], nameFromGUID[caster], floor(cS*100+0.5)/100, "=>", floor(cE*100+0.5)/100)
 				elseif resCasting[target] > 1 then
 					resCasting[target] = resCasting[target] - 1
 				else
