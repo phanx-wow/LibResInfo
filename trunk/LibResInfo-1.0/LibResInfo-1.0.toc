@@ -1,5 +1,5 @@
 ## Interface: 50200
-## Version: rwowi:revision
+## Version: v10
 
 ## Title: Lib: ResInfo-1.0
 ## Notes: Library to provide information about resurrections.
