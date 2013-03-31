@@ -16,7 +16,7 @@ Things that can't be done:
   when the res spell was cast.
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = 0
+local DEBUG_LEVEL = GetAddOnMetadata("LibResInfo-1.0", "Version") and 1 or 0
 local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
