@@ -21,7 +21,7 @@ local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 9
+local MAJOR, MINOR = "LibResInfo-1.0", 10
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -127,6 +127,17 @@ local function debug(level, text, ...)
 		end
 		DEBUG_FRAME:AddMessage("|cff00ddba[LRI]|r " .. text)
 	end
+end
+
+------------------------------------------------------------------------
+
+function lib.RegisterAllCallbacks(handler, method)
+	lib.RegisterCallback(handler, "LibResInfo_ResCastStarted", method)
+	lib.RegisterCallback(handler, "LibResInfo_ResCastCancelled", method)
+	lib.RegisterCallback(handler, "LibResInfo_ResCastFinished", method)
+	lib.RegisterCallback(handler, "LibResInfo_ResPending", method)
+	lib.RegisterCallback(handler, "LibResInfo_ResUsed", method)
+	lib.RegisterCallback(handler, "LibResInfo_ResExpired", method)
 end
 
 ------------------------------------------------------------------------
