@@ -311,12 +311,12 @@ function f:GROUP_ROSTER_UPDATE()
 	for caster in pairs(castEnd) do
 		if not unitFromGUID[caster] then
 			debug(4, nameFromGUID[caster], "left while casting on", nameFromGUID[target])
-			local cS, cE = castStart[caster] or 0, castEnd[caster] or 0
+			local startTime, endTime = castStart[caster] or 0, castEnd[caster] or 0
 			castStart[caster], castEnd[caster] = nil, nil
 			local target = castTarget[caster]
 			if target then
 				if not resCasting[target] then
-					debug(1, "LibResInfo: Missing cast count on", unitFromGUID_old[target], nameFromGUID[target], "by", unitFromGUID_old[caster], nameFromGUID[caster], floor(cS*100+0.5)/100, "=>", floor(cE*100+0.5)/100)
+					print("LibResInfo: Missing cast count on", unitFromGUID_old[target], nameFromGUID[target], "by", unitFromGUID_old[caster], nameFromGUID[caster], floor(startTime), "=>", floor(endTime))
 				elseif resCasting[target] > 1 then
 					resCasting[target] = resCasting[target] - 1
 				else
