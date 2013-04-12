@@ -315,9 +315,7 @@ function f:GROUP_ROSTER_UPDATE()
 			castStart[caster], castEnd[caster] = nil, nil
 			local target = castTarget[caster]
 			if target then
-				if not resCasting[target] then
-					print("LibResInfo: Missing cast count on", unitFromGUID_old[target], nameFromGUID[target], "by", unitFromGUID_old[caster], nameFromGUID[caster], floor(startTime), "=>", floor(endTime))
-				elseif resCasting[target] > 1 then
+				if resCasting[target] and resCasting[target] > 1 then
 					resCasting[target] = resCasting[target] - 1
 				else
 					resCasting[target] = nil
@@ -329,7 +327,7 @@ function f:GROUP_ROSTER_UPDATE()
 				castMass[caster] = nil
 				for guid, unit in pairs(guidFromUnit) do
 					if UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) and not UnitDebuff(unit, RECENTLY_MASS_RESURRECTED) then
-						if resCasting[guid] > 1 then
+						if resCasting[guid] and resCasting[guid] > 1 then
 							resCasting[guid] = resCasting[guid] - 1
 						else
 							resCasting[guid] = nil
