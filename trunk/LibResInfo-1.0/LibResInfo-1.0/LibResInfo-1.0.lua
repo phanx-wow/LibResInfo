@@ -607,7 +607,7 @@ function f:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster
 					debug(4, n, "mass targets left")
 				end
 
-				ghost[destUnit] = UnitIsGhost(destUnit)
+				ghost[destGUID] = UnitIsGhost(destUnit)
 
 				if new then
 					total.pending = total.pending + 1
