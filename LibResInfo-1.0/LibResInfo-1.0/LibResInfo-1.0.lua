@@ -21,7 +21,7 @@ local DEBUG_FRAME = ChatFrame1
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 11
+local MAJOR, MINOR = "LibResInfo-1.0", 12
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -219,7 +219,9 @@ function lib:UnitIsCastingRes(unit)
 
 			elseif castMass[guid] then
 				for k in pairs(castMass) do
-					if k ~= guid and castEnd[k] < endTime then
+					if not castEnd[k] then
+						castMass[k], castStart[k] = nil, nil
+					elseif k ~= guid and castEnd[k] < endTime then
 						isFirst = nil
 						break
 					end
