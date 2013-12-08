@@ -29,48 +29,31 @@ if not lib then return end
 
 ------------------------------------------------------------------------
 
-lib.callbacks = lib.callbacks or LibStub("CallbackHandler-1.0"):New(lib)
-
-lib.eventFrame = lib.eventFrame or CreateFrame("Frame")
-
-lib.guidFromUnit = lib.guidFromUnit or {}
-lib.nameFromGUID = lib.nameFromGUID or {}
-lib.unitFromGUID = lib.unitFromGUID or {}
-
-lib.castStart = lib.castStart or {}
-lib.castEnd = lib.castEnd or {}
-lib.castTarget = lib.castTarget or {}
-lib.castMass = lib.castMass or {}
-
-lib.resCasting = lib.resCasting or {}
-lib.resPending = lib.resPending or {}
-
-lib.total = lib.total or {}
-
-lib.ghost = lib.ghost or {}
+lib.eventFrame   = lib.eventFrame   or CreateFrame("Frame")
+lib.callbacks    = lib.callbacks    or LibStub("CallbackHandler-1.0"):New(lib)
+lib.guidFromUnit = lib.guidFromUnit or {} -- t[unit] = guid (faster than calling UnitGUID again)
+lib.nameFromGUID = lib.nameFromGUID or {} -- t[guid] = name
+lib.unitFromGUID = lib.unitFromGUID or {} -- t[guid] = unit
+lib.castStart    = lib.castStart    or {} -- t[casterGUID] = startTime
+lib.castEnd      = lib.castEnd      or {} -- t[casterGUID] = endTime
+lib.castTarget   = lib.castTarget   or {} -- t[casterGUID] = targetGUID
+lib.castMass     = lib.castMass     or {} -- t[casterGUID] = endTime
+lib.resCasting   = lib.resCasting   or {} -- t[targetGUID] = numCasting
+lib.resPending   = lib.resPending   or {} -- t[targetGUID] = expiryTime
+lib.total        = lib.total        or {} -- casting = numCasting, pending = numPending
+lib.ghost        = lib.ghost        or {} -- t[targetGUID] = true
 
 ------------------------------------------------------------------------
 
-local callbacks = lib.callbacks
-local f = lib.eventFrame
+local f, callbacks = lib.eventFrame, lib.callbacks
+local guidFromUnit, nameFromGUID, unitFromGUID = lib.guidFromUnit, lib.nameFromGUID, lib.unitFromGUID
+local castStart, castEnd, castTarget = lib.castStart, lib.castEnd, lib.castTarget
+local castMass = lib.castMass
+local resCasting, resPending = lib.resCasting, lib.resPending
+local total, ghost = lib.total, lib.ghost
 
-local guidFromUnit = lib.guidFromUnit -- unit = guid
-local nameFromGUID = lib.nameFromGUID -- guid = name
-local unitFromGUID = lib.unitFromGUID -- guid = unit
-
-local castStart = lib.castStart   -- caster guid = cast start time
-local castEnd = lib.castEnd       -- caster guid = cast end time
-local castTarget = lib.castTarget -- caster guid = target guid
-local castMass = lib.castMass     -- caster guid = casting Mass Res
-
-local resCasting = lib.resCasting  -- dead guid = # res spells being cast on them
-local resPending  = lib.resPending -- dead guid = expiration time
-
-local total = lib.total
 total.casting = total.casting or 0 -- # res spells being cast
 total.pending = total.pending or 0 -- # resses available to take
-
-local ghost = lib.ghost
 
 if DEBUG_LEVEL > 0 then
 	LibResInfo = lib
@@ -96,7 +79,7 @@ local resSpells = {
 	[50769]  = GetSpellInfo(50769),  -- Revive (druid)
 	[982]    = GetSpellInfo(982),    -- Revive Pet (hunter)
 	[20707]  = GetSpellInfo(20707),  -- Soulstone (warlock)
-	[83968]  = GetSpellInfo(83968),  -- Mass Resurrection
+--	[83968]  = GetSpellInfo(83968),  -- Mass Resurrection
 }
 
 ------------------------------------------------------------------------
@@ -471,53 +454,47 @@ end
 ------------------------------------------------------------------------
 
 function f:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
-	if guidFromUnit[unit] and resSpells[spellID] then
-		local guid = UnitGUID(unit)
-		debug(3, event, "=>", nameFromGUID[guid], "=>", spellName)
+	local guid = guidFromUnit[unit]
+	if not guid then return end
 
+	if spellID == 83968 then -- Mass Resurrection
 		local _, _, _, _, startTime, endTime = UnitCastingInfo(unit)
-		debug(4, "UnitCastingInfo =>", spellID, spellName, floor(startTime / 1000), floor(endTime / 1000))
+		castMass[guid] = endTime
+		debug(1, ">> MassResStarted", "by", nameFromGUID[guid])
+		callbacks:Fire("LibResInfo_MassResStarted", nil, nil, unit, guid, endTime / 1000)
 
+	elseif resSpells[spellID] then
+		local _, _, _, _, startTime, endTime = UnitCastingInfo(unit)
+		debug(3, event, "=>", nameFromGUID[guid], "=>", spellName)
 		castStart[guid] = startTime / 1000
 		castEnd[guid] = endTime / 1000
-
-		if spellID == 83968 then -- Mass Resurrection
-			castMass[guid] = true
-			for targetGUID, targetUnit in pairs(unitFromGUID) do
-				if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
-					debug(1, ">> ResCastStarted", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
-					callbacks:Fire("LibResInfo_ResCastStarted", targetUnit, targetGUID, unit, guid, endTime / 1000)
-				end
-			end
-		end
 	end
 end
 
 function f:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
+	local guid = guidFromUnit[unit]
+	if not guid then return end
+
+	if castMass[guid] then -- Mass Resurrection
+
+		for targetGUID, targetUnit in pairs(unitFromGUID) do
+			if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
+				debug(1, ">> ResCastFinished", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
+				callbacks:Fire("LibResInfo_ResCastFinished", targetUnit, targetGUID, unit, guid)
+				n = n + 1
+			end
+		end
+
+		if n > 0 then
+			debug(4, n, "casting, waiting for CLEU")
+			self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+		end
+	end
 	if guidFromUnit[unit] and resSpells[spellID] then
 		local guid = UnitGUID(unit)
 		if castStart[guid] then
 			debug(3, event, "=>", nameFromGUID[guid], "=>", spellName)
 			castStart[guid] = nil
-
-			if castMass[guid] then -- Mass Resurrection
-				castEnd[guid] = nil
-
-				local n = total.casting
-
-				for targetGUID, targetUnit in pairs(unitFromGUID) do
-					if UnitIsDeadOrGhost(targetUnit) and UnitIsConnected(targetUnit) and not UnitDebuff(targetUnit, RECENTLY_MASS_RESURRECTED) then
-						debug(1, ">> ResCastFinished", "on", nameFromGUID[targetGUID], "by", nameFromGUID[guid])
-						callbacks:Fire("LibResInfo_ResCastFinished", targetUnit, targetGUID, unit, guid)
-						n = n + 1
-					end
-				end
-
-				if n > 0 then
-					debug(4, n, "casting, waiting for CLEU")
-					self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-				end
-			end
 		else
 			-- instant cast
 			resCasting[guid] = 1 + (resCasting[guid] or 1)
