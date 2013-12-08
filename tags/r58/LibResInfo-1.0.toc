@@ -1,0 +1,21 @@
+## Interface: 50200
+## Version: v10
+
+## Title: Lib: ResInfo-1.0
+## Notes: Library to provide information about resurrections.
+
+## Author: Phanx
+## X-Email: addons@phanx.net
+## X-Copyright: Copyright (c) 2012 A. "Phanx" Kinley. All rights reserved.
+## X-License: See accompanying LICENSE file for details.
+## X-Website: http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html
+## X-AceForum: 2525
+## X-Curse-Project-ID: libresinfo
+## X-WoWI-ID: 21467
+
+## OptionalDeps: LibStub, CallbackHandler-1.0
+
+LibStub\LibStub.lua
+CallbackHandler-1.0\CallbackHandler-1.0.lua
+
+LibResInfo-1.0\LibResInfo-1.0.lua
