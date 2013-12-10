@@ -13,7 +13,7 @@ local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 13
+local MAJOR, MINOR = "LibResInfo-1.0", 14
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -391,7 +391,7 @@ function eventFrame:INCOMING_RESURRECT_CHANGED(event, unit)
 				-- Found it!
 				data.target = guid
 				debug(1, ">> ResCastStarted on", nameFromGUID[guid], "by", nameFromGUID[caster], "in", event)
-				callbacks:Fire("LibResInfo_ResCastStarted", unit, guid, caster, unitFromGUID[caster], data.endTime)
+				callbacks:Fire("LibResInfo_ResCastStarted", unit, guid, unitFromGUID[caster], caster, data.endTime)
 				break
 			end
 		end
