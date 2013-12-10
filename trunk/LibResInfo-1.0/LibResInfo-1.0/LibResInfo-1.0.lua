@@ -13,7 +13,7 @@ local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 14
+local MAJOR, MINOR = "LibResInfo-1.0", 15
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -460,11 +460,14 @@ function eventFrame:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spell
 	local data = castingSingle[guid]
 	if data then -- No START event for instant cast spells.
 		local target = data.target
-		castingSingle[guid] = remTable(data) -- TODO: Why was I removing only startTime here and waiting for IRC?
+		-- castingSingle[guid] = remTable(data) -- TODO: Why was I removing only startTime here and waiting for IRC?
+		-- DONE: Because I need a way to ignore this in STOP so CLEU doesn't get unregistered.
+		-- Solution: add a "finished" flag and check that in STOP.
 		if not target then
 			-- Probably Soulstone precast on a live target.
 			return
 		end
+		data.finished = true -- Flag so STOP can ignore this.
 		debug(1, ">> ResCastFinished", "on", nameFromGUID[target], "by", nameFromGUID[guid], "in", event)
 		callbacks:Fire("LibResInfo_ResCastFinished", unitFromGUID[target], target, unit, guid)
 	end
@@ -480,6 +483,8 @@ function eventFrame:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 
 	debug(3, event, nameFromGUID[guid], "stopped", spellName)
 
+	local finished
+
 	if spellID == 83968 and castingMass[guid] then -- Mass Resurrection
 		castingMass[guid] = nil
 		debug(1, ">> MassResCancelled", nameFromGUID[guid])
@@ -488,9 +493,11 @@ function eventFrame:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 		local data = castingSingle[guid]
 		if data then
 			local target = data.target
+			local finished = data.finished
 			castingSingle[guid] = remTable(data)
-			if not target then
-				-- Probably Soulstone precast on a live target.
+			if not target or finished then
+				-- no target = Probably Soulstone precast on a live target.
+				-- finished = Cast finished. Don't fire a callback or unregister CLEU.
 				return
 			end
 			debug(1, ">> ResCastCancelled", "on", nameFromGUID[target], "by", nameFromGUID[guid])
@@ -510,7 +517,7 @@ eventFrame.UNIT_SPELLCAST_INTERRUPTED = eventFrame.UNIT_SPELLCAST_STOP
 ------------------------------------------------------------------------
 
 function eventFrame:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID, spellName, spellSchool)
-	if event ~= "SPELL_RESURRECT" then return end
+	if combatEvent ~= "SPELL_RESURRECT" then return end
 
 	local destUnit = unitFromGUID[destGUID]
 	if not destUnit then return end
@@ -519,8 +526,8 @@ function eventFrame:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, h
 	local now = GetTime()
 	local endTime = now + RESURRECT_PENDING_TIME
 
-	hasPending[guid] = endTime
-	--isGhost[guid] = UnitIsGhost(destUnit)
+	hasPending[destGUID] = endTime
+	--isGhost[destGUID] = UnitIsGhost(destUnit)
 
 	--debug(3, "Registering unit state events")
 	--self:RegisterEvent("UNIT_AURA")
@@ -573,7 +580,7 @@ function eventFrame:UNIT_AURA(event, unit)
 	end]]
 end
 
-function eventFrame:UNIT_CONNECTION(unit)
+function eventFrame:UNIT_CONNECTION(event, unit)
 	local guid = guidFromUnit[unit]
 	if not guid then return end
 	debug(4, event, unit)
@@ -585,13 +592,15 @@ function eventFrame:UNIT_CONNECTION(unit)
 	end
 end
 
-function eventFrame:UNIT_HEALTH(unit)
+function eventFrame:UNIT_HEALTH(event, unit)
 	local guid = guidFromUnit[unit]
 	if not guid then return end
 	--debug(5, event, unit)
 
 	local dead = UnitIsDead(unit)
+
 	if dead and not isDead[guid] then
+		debug(2, nameFromGUID[guid], "is now dead")
 		isDead[guid] = true
 		if hasSoulstone[guid] then
 			local endTime = GetTime() + RESURRECT_PENDING_TIME
@@ -600,7 +609,8 @@ function eventFrame:UNIT_HEALTH(unit)
 			callbacks:Fire("LibResInfo_ResPending", unit, guid, endTime, true)
 		end
 
-	elseif not dead then
+	elseif isDead[guid] and not dead then
+		debug(2, nameFromGUID[guid], "is now alive")
 		isDead[guid] = nil
 		if hasPending[guid] then
 			isGhost[guid] = nil
