@@ -13,7 +13,7 @@ local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 15
+local MAJOR, MINOR = "LibResInfo-1.0", 16
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -56,6 +56,7 @@ lib.isGhost         = isGhost
 ------------------------------------------------------------------------
 
 local RESURRECT_PENDING_TIME = 60
+local RELEASE_PENDING_TIME = 360
 local RECENTLY_MASS_RESURRECTED = GetSpellInfo(95223)
 local SOULSTONE = GetSpellInfo(20707)
 
@@ -79,9 +80,14 @@ local resSpells = {
 
 ------------------------------------------------------------------------
 
+local next, pairs, GetNumGroupMembers, GetTime, IsInGroup, IsInRaid, UnitAura, UnitCastingInfo, UnitGUID, UnitHasIncomingResurrection, UnitHealth, UnitIsConnected, UnitIsDead, UnitIsDeadOrGhost, UnitIsGhost, UnitName
+    = next, pairs, GetNumGroupMembers, GetTime, IsInGroup, IsInRaid, UnitAura, UnitCastingInfo, UnitGUID, UnitHasIncomingResurrection, UnitHealth, UnitIsConnected, UnitIsDead, UnitIsDeadOrGhost, UnitIsGhost, UnitName
+
+------------------------------------------------------------------------
+
 local function debug(level, text, ...)
 	if level <= DEBUG_LEVEL then
-		if select("#", ...) > 0 then
+		if ... then
 			if type(text) == "string" and strfind(text, "%%[dfqsx%d%.]") then
 				text = format(text, ...)
 			else
@@ -118,10 +124,10 @@ lib.callbacksInUse = lib.callbacksInUse or {}
 eventFrame:SetScript("OnEvent", function(self, event, ...)
 	return self[event] and self[event](self, event, ...)
 end)
---[[
+
 function callbacks:OnUsed(lib, callback)
 	if not next(lib.callbacksInUse) then
-		debug(1, "Used")]]
+		debug(1, "Used")
 		eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 		eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 		eventFrame:RegisterEvent("INCOMING_RESURRECT_CHANGED")
@@ -129,10 +135,10 @@ function callbacks:OnUsed(lib, callback)
 		eventFrame:RegisterEvent("UNIT_SPELLCAST_START")
 		eventFrame:RegisterEvent("UNIT_SPELLCAST_STOP")
 		eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-		-- Test for Soulstone support:
 		eventFrame:RegisterEvent("UNIT_AURA")
 		eventFrame:RegisterEvent("UNIT_CONNECTION")
-		eventFrame:RegisterEvent("UNIT_HEALTH")--[[
+		eventFrame:RegisterEvent("UNIT_HEALTH")
+		eventFrame:GROUP_ROSTER_UPDATE("OnUsed")
 	end
 	lib.callbacksInUse[callback] = true
 end
@@ -148,12 +154,14 @@ function callbacks:OnUnused(lib, callback)
 		wipe(unitFromGUID)
 		wipe(castingMass)
 		wipe(hasPending)
+		wipe(hasSoulstone)
+		wipe(isDead)
 		wipe(isGhost)
 		for caster, data in pairs(castingSingle) do
 			castingSingle[caster] = remTable(data)
 		end
 	end
-end]]
+end
 
 ------------------------------------------------------------------------
 
@@ -181,6 +189,7 @@ end
 --   - PENDING if the unit already has a res available to accept, or
 --	  - CASTING if a res is being cast on the unit.
 --	* caster and casterGUID are nil if the unit is being Mass Ressed.
+------------------------------------------------------------------------
 
 function lib:UnitHasIncomingRes(unit)
 	if type(unit) ~= "string" then return end
@@ -229,6 +238,7 @@ end
 --	Returns: endTime (number), target (unitID), targetGUID (guid), isFirst (boolean)
 --	* all returns are nil if the unit is not casting a res
 --	* target and targetGUID are nil if the unit is casting Mass Res
+------------------------------------------------------------------------
 
 function lib:UnitIsCastingRes(unit)
 	if type(unit) ~= "string" then return end
@@ -350,10 +360,7 @@ function eventFrame:GROUP_ROSTER_UPDATE(event)
 
 	-- Unregister unit events and stop the timer if there are no waiters:
 	if not next(hasPending) then
-		--debug(3, "Nobody pending, unregistering unit state events")
-		--self:UnregisterEvent("UNIT_AURA")
-		--self:UnregisterEvent("UNIT_CONNECTION")
-		--self:UnregisterEvent("UNIT_HEALTH")
+		debug(3, "Nobody pending, stop timer")
 		self:Hide()
 	end
 
@@ -460,9 +467,6 @@ function eventFrame:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spell
 	local data = castingSingle[guid]
 	if data then -- No START event for instant cast spells.
 		local target = data.target
-		-- castingSingle[guid] = remTable(data) -- TODO: Why was I removing only startTime here and waiting for IRC?
-		-- DONE: Because I need a way to ignore this in STOP so CLEU doesn't get unregistered.
-		-- Solution: add a "finished" flag and check that in STOP.
 		if not target then
 			-- Probably Soulstone precast on a live target.
 			return
@@ -527,12 +531,7 @@ function eventFrame:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, h
 	local endTime = now + RESURRECT_PENDING_TIME
 
 	hasPending[destGUID] = endTime
-	--isGhost[destGUID] = UnitIsGhost(destUnit)
 
-	--debug(3, "Registering unit state events")
-	--self:RegisterEvent("UNIT_AURA")
-	--self:RegisterEvent("UNIT_CONNECTION")
-	--self:RegisterEvent("UNIT_HEALTH")
 	self:Show()
 
 	debug(1, ">> ResPending", "on", strmatch(destName, "[^%-]+"), "by", strmatch(sourceName, "[^%-]+"))
@@ -552,11 +551,14 @@ end
 function eventFrame:UNIT_AURA(event, unit)
 	local guid = guidFromUnit[unit]
 	if not guid then return end
-	--debug(5, event, unit)
+	debug(5, event, unit)
 
 	if not isDead[guid] then
 		local stoned = UnitAura(unit, SOULSTONE)
 		if stoned ~= hasSoulstone[guid] then
+			if not stoned and UnitHealth(unit) <= 1 then
+				return
+			end
 			hasSoulstone[guid] = stoned
 			debug(2, nameFromGUID[guid], stoned and "gained" or "lost", SOULSTONE)
 		end
@@ -571,13 +573,6 @@ function eventFrame:UNIT_AURA(event, unit)
 			callbacks:Fire("LibResInfo_ResExpired", unit, guid)
 		end
 	end
---[[
-	if not next(hasPending) then
-		debug(4, "Unregistering unit state events")
-		--self:UnregisterEvent("UNIT_AURA")
-		--self:UnregisterEvent("UNIT_CONNECTION")
-		--self:UnregisterEvent("UNIT_HEALTH")
-	end]]
 end
 
 function eventFrame:UNIT_CONNECTION(event, unit)
@@ -595,7 +590,7 @@ end
 function eventFrame:UNIT_HEALTH(event, unit)
 	local guid = guidFromUnit[unit]
 	if not guid then return end
-	--debug(5, event, unit)
+	debug(5, event, unit)
 
 	local dead = UnitIsDead(unit)
 
@@ -603,7 +598,7 @@ function eventFrame:UNIT_HEALTH(event, unit)
 		debug(2, nameFromGUID[guid], "is now dead")
 		isDead[guid] = true
 		if hasSoulstone[guid] then
-			local endTime = GetTime() + RESURRECT_PENDING_TIME
+			local endTime = GetTime() + RELEASE_PENDING_TIME
 			hasPending[guid] = endTime
 			debug(1, ">> ResPending", nameFromGUID[guid], SOULSTONE)
 			callbacks:Fire("LibResInfo_ResPending", unit, guid, endTime, true)
@@ -631,10 +626,7 @@ eventFrame:SetScript("OnUpdate", function(self, elapsed)
 	if timer >= INTERVAL then
 		debug(6, "Timer update")
 		if not next(hasPending) then
-			--debug(4, "Nobody pending, unregistering unit state events")
-			--self:UnregisterEvent("UNIT_AURA")
-			--self:UnregisterEvent("UNIT_CONNECTION")
-			--self:UnregisterEvent("UNIT_HEALTH")
+			debug(4, "Nobody pending, stop timer")
 			return self:Hide()
 		end
 		local now = GetTime()
