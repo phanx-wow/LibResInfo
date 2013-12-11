@@ -127,7 +127,7 @@ end)
 
 function callbacks:OnUsed(lib, callback)
 	if not next(lib.callbacksInUse) then
-		debug(1, "Used")
+		debug(1, "Callbacks in use! Starting up...")
 		eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 		eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 		eventFrame:RegisterEvent("INCOMING_RESURRECT_CHANGED")
@@ -146,7 +146,7 @@ end
 function callbacks:OnUnused(lib, callback)
 	lib.callbacksInUse[callback] = nil
 	if not next(lib.callbacksInUse) then
-		debug(1, "Unused")
+		debug(1, "No callbacks in use. Shutting down...")
 		eventFrame:UnregisterAllEvents()
 		eventFrame:Hide()
 		wipe(guidFromUnit)
@@ -206,7 +206,7 @@ function lib:UnitHasIncomingRes(unit)
 	end
 	if hasPending[guid] then
 		local state = hasSoulstone[guid] and "SELFRES" or "PENDING"
-		debug(2, "UnitHasIncomingRes", nameFromGUID[guid], state)
+		--debug(2, "UnitHasIncomingRes", nameFromGUID[guid], state)
 		return state, hasPending[guid]
 	end
 
@@ -226,10 +226,10 @@ function lib:UnitHasIncomingRes(unit)
 		end
 	end
 	if state and firstCaster and firstEnd then
-		debug(2, "UnitHasIncomingRes", nameFromGUID[guid], state, nameFromGUID[firstCaster])
+		--debug(2, "UnitHasIncomingRes", nameFromGUID[guid], state, nameFromGUID[firstCaster])
 		return state, firstEnd, unitFromGUID[firstCaster], firstCaster
 	end
-	debug(3, "UnitHasIncomingRes", nameFromGUID[guid], "nil")
+	--debug(3, "UnitHasIncomingRes", nameFromGUID[guid], "nil")
 end
 
 ------------------------------------------------------------------------
@@ -264,7 +264,7 @@ function lib:UnitIsCastingRes(unit)
 				break
 			end
 		end
-		debug(2, "UnitIsCastingRes", nameFromGUID[guid], "casting on", nameFromGUID[casting.target], isFirst and "(first)" or "(duplicate)")
+		--debug(2, "UnitIsCastingRes", nameFromGUID[guid], "casting on", nameFromGUID[casting.target], isFirst and "(first)" or "(duplicate)")
 		return endTime, unitFromGUID[casting.target], casting.target, isFirst
 	end
 
@@ -277,11 +277,11 @@ function lib:UnitIsCastingRes(unit)
 				break
 			end
 		end
-		debug(2, "UnitIsCastingRes", nameFromGUID[guid], "casting Mass Res", isFirst and "(first)" or "(duplicate)")
+		--debug(2, "UnitIsCastingRes", nameFromGUID[guid], "casting Mass Res", isFirst and "(first)" or "(duplicate)")
 		return endTime, nil, nil, isFirst
 	end
 
-	debug(3, "UnitIsCastingRes", nameFromGUID[guid], "nil")
+	--debug(3, "UnitIsCastingRes", nameFromGUID[guid], "nil")
 end
 
 ------------------------------------------------------------------------
