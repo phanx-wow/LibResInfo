@@ -3,6 +3,8 @@ LibResInfo-1.0
 Library to provide information about resurrections in your group.
 Copyright (c) 2012-2013 A. Kinley <addons@phanx.net>. All rights reserved.
 See the accompanying README and LICENSE files for more information.
+http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html
+http://wow.curseforge.com/addons/libresinfo/
 ------------------------------------------------------------------------
 TODO:
 * Handle Reincarnation
@@ -487,8 +489,6 @@ function eventFrame:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 
 	debug(3, event, nameFromGUID[guid], "stopped", spellName)
 
-	local finished
-
 	if spellID == 83968 and castingMass[guid] then -- Mass Resurrection
 		castingMass[guid] = nil
 		debug(1, ">> MassResCancelled", nameFromGUID[guid])
@@ -499,7 +499,7 @@ function eventFrame:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 			local target = data.target
 			local finished = data.finished
 			castingSingle[guid] = remTable(data)
-			if not target or finished then
+			if finished or not target then
 				-- no target = Probably Soulstone precast on a live target.
 				-- finished = Cast finished. Don't fire a callback or unregister CLEU.
 				return
