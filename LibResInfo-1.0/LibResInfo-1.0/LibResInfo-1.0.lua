@@ -441,7 +441,7 @@ function eventFrame:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 	if spellID == 83968 then -- Mass Resurrection
 		castingMass[guid] = endTime / 1000
 		debug(1, ">> MassResStarted", nameFromGUID[guid])
-		callbacks:Fire("LibResInfo_MassResStarted", unit, guid)
+		callbacks:Fire("LibResInfo_MassResStarted", unit, guid, endTime / 1000)
 		return
 	end
 
