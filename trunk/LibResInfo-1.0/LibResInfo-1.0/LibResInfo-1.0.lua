@@ -489,7 +489,8 @@ function eventFrame:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 
 	debug(3, event, nameFromGUID[guid], "stopped", spellName)
 
-	if spellID == 83968 and castingMass[guid] then -- Mass Resurrection
+	if spellID == 83968 then -- Mass Resurrection
+		if not castingMass[guid] then return end -- already SUCCEEDED
 		castingMass[guid] = nil
 		debug(1, ">> MassResCancelled", nameFromGUID[guid])
 		callbacks:Fire("LibResInfo_MassResCancelled", unit, guid)
