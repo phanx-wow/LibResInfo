@@ -7,7 +7,7 @@ http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html
 http://wow.curseforge.com/addons/libresinfo/
 ------------------------------------------------------------------------
 TODO:
-* Handle Reincarnation
+* Handle Reincarnation with some guesswork?
 ----------------------------------------------------------------------]]
 
 local DEBUG_LEVEL = GetAddOnMetadata("LibResInfo-1.0", "Version") and 1 or 0
@@ -15,7 +15,7 @@ local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 18
+local MAJOR, MINOR = "LibResInfo-1.0", 19
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -154,14 +154,14 @@ function callbacks:OnUnused(lib, callback)
 		wipe(guidFromUnit)
 		wipe(nameFromGUID)
 		wipe(unitFromGUID)
+		for caster, data in pairs(castingSingle) do
+			castingSingle[caster] = remTable(data)
+		end
 		wipe(castingMass)
 		wipe(hasPending)
 		wipe(hasSoulstone)
 		wipe(isDead)
 		wipe(isGhost)
-		for caster, data in pairs(castingSingle) do
-			castingSingle[caster] = remTable(data)
-		end
 	end
 end
 
@@ -176,6 +176,7 @@ function lib.RegisterAllCallbacks(handler, method, includeMassRes)
 		lib.RegisterCallback(handler, "LibResInfo_MassResStarted", method)
 		lib.RegisterCallback(handler, "LibResInfo_MassResCancelled", method)
 		lib.RegisterCallback(handler, "LibResInfo_MassResFinished", method)
+		lib.RegisterCallback(handler, "LibResInfo_UnitUpdate", method)
 	end
 
 	lib.RegisterCallback(handler, "LibResInfo_ResPending", method)
@@ -575,6 +576,8 @@ function eventFrame:UNIT_AURA(event, unit)
 			debug(1, ">> ResExpired", nameFromGUID[guid], "(released)")
 			callbacks:Fire("LibResInfo_ResExpired", unit, guid)
 		end
+		-- No need to check next(castingMass) and fire a UnitUpdate here
+		-- since Mass Resurrection will still hit units who released.
 	end
 end
 
@@ -587,6 +590,14 @@ function eventFrame:UNIT_CONNECTION(event, unit)
 		hasPending[guid] = nil
 		debug(1, ">> ResExpired", nameFromGUID[guid], "(offline)")
 		callbacks:Fire("LibResInfo_ResExpired", unit, guid)
+	elseif next(castingMass) then
+		for caster, data in pairs(castingSingle) do
+			if data.target == guid then
+				return
+			end
+		end
+		debug(1, ">> UnitUpdate", nameFromGUID[guid], "(offline)")
+		callbacks:Fire("LibResInfo_UnitUpdate", unit, guid)
 	end
 end
 
@@ -605,6 +616,9 @@ function eventFrame:UNIT_HEALTH(event, unit)
 			hasPending[guid] = endTime
 			debug(1, ">> ResPending", nameFromGUID[guid], SOULSTONE)
 			callbacks:Fire("LibResInfo_ResPending", unit, guid, endTime, true)
+		elseif next(castingMass) then
+			debug(1, ">> UnitUpdate", nameFromGUID[guid], "(dead)")
+			callbacks:Fire("LibResInfo_UnitUpdate", unit, guid)
 		end
 
 	elseif isDead[guid] and not dead then
@@ -615,6 +629,14 @@ function eventFrame:UNIT_HEALTH(event, unit)
 			hasPending[guid] = nil
 			debug(1, ">> ResUsed", nameFromGUID[guid])
 			callbacks:Fire("LibResInfo_ResUsed", unit, guid)
+		elseif next(castingMass) then
+			for caster, data in pairs(castingSingle) do
+				if data.target == guid then
+					return
+				end
+			end
+			debug(1, ">> UnitUpdate", nameFromGUID[guid], "(alive)")
+			callbacks:Fire("LibResInfo_UnitUpdate", unit, guid)
 		end
 	end
 end
