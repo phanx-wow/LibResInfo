@@ -1,5 +1,5 @@
 ## Interface: 50400
-## Version: 18
+## Version: 19
 
 ## Title: Lib: ResInfo-1.0
 ## Notes: Library to provide information about resurrections.
