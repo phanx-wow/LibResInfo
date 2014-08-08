@@ -1,15 +1,7 @@
 LibResInfo-1.0
-==================
+=================
 
-* Library to provide information about resurrections cast in your group.
-* Copyright (c) 2012-2014 A. "Phanx" Kinley. All rights reserved.
-* See the accompanying LICENSE file for details.
-* http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html
-* http://wow.curseforge.com/addons/libresinfo/
-
-
-Description
----------------
+Library to provide information about resurrections cast in your group.
 
 LibResInfo detects resurrection spell casts and identifies who they are
 being cast on, and provides that information to addons through callbacks
@@ -25,8 +17,15 @@ Requires [LibStub] [1] and [CallbackHandler-1.0] [2].
  [2]: http://www.wowace.com/addons/callbackhandler/
 
 
+Downloads
+------------
+
+* [WoWInterface](http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html)
+* [CurseForge](http://wow.curseforge.com/addons/libresinfo/)
+
+
 API Documentation
----------------------
+--------------------
 
 Information about the callbacks and functions LibResInfo provides are
 available on the [CurseForge project page] [3].
@@ -35,20 +34,26 @@ available on the [CurseForge project page] [3].
 
 
 Feedback
-------------
+-----------
 
-Please direct all bug reports, suggestions, questions, and comments to
+Please direct all bug reports, suggestions, questions and comments to
 the [WoWInterface forum thread] [4].
 
-If you need to contact me privately for a reason other than those listed
-above, you can send me a private message on either download site, or
-email me at <addons@phanx.net>.
-
  [4]: http://www.wowinterface.com/forums/showthread.php?t=43933
+
+If you are reporting a bug, please include directions I can follow to
+reproduce the bug, whether it still happens when all other addons are
+disabled, and the exact text of the related error message (if any) from
+[BugSack](http://www.wowinterface.com/downloads/info5995-BugSack.html).
+
+If you need to contact me privately, you can send me a private message
+on either download site, or email me at <addons@phanx.net>.
 
 
 License
 ----------
 
-Copyright (c) 2013-2014 Phanx. All rights reserved. See the accompanying
-LICENSE file for additional information.
+Copyright (c) 2012-2014 Phanx. All rights reserved.
+
+See the accompanying LICENSE file for information about the conditions
+under which redistribution and modification may be allowed.
