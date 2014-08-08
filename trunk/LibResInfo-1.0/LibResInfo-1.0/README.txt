@@ -45,3 +45,10 @@ above, you can send me a private message on either download site, or
 email me at <addons@phanx.net>.
 
  [4]: http://www.wowinterface.com/forums/showthread.php?t=43933
+
+
+License
+----------
+
+Copyright (c) 2013-2014 Phanx. All rights reserved. See the accompanying
+LICENSE file for additional information.
