@@ -10,7 +10,7 @@
 ## Author: Phanx
 ## X-Email: addons@phanx.net
 ## X-Copyright: Copyright (c) 2012-2014 Phanx. All rights reserved.
-## X-License: See accompanying LICENSE file for details.
+## X-License: See the accompanying LICENSE file for details.
 ## X-Website: http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html
 ## X-AceForum: 2525
 ## X-Curse-Project-ID: libresinfo
