@@ -15,7 +15,7 @@ local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 19
+local MAJOR, MINOR = "LibResInfo-1.0", 20
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -70,7 +70,6 @@ local resSpells = {
 	[126393] = GetSpellInfo(126393), -- Eternal Guardian (hunter pet: quilien)
 	[61999]  = GetSpellInfo(61999),  -- Raise Ally (death knight)
 	[20484]  = GetSpellInfo(20484),  -- Rebirth (druid)
-	[113269] = GetSpellInfo(113269), -- Rebirth (prot/holy paladin symbiosis)
 	[7328]   = GetSpellInfo(7328),   -- Redemption (paladin)
 	[2006]   = GetSpellInfo(2006),   -- Resurrection (priest)
 	[115178] = GetSpellInfo(115178), -- Resuscitate (monk)
