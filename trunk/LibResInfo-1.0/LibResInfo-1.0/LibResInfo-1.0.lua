@@ -8,6 +8,7 @@ http://wow.curseforge.com/addons/libresinfo/
 ------------------------------------------------------------------------
 TODO:
 * Handle Reincarnation with some guesswork?
+* Clear data when releasing spirit
 ----------------------------------------------------------------------]]
 
 local DEBUG_LEVEL = GetAddOnMetadata("LibResInfo-1.0", "Version") and 1 or 0
@@ -15,7 +16,7 @@ local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 20
+local MAJOR, MINOR = "LibResInfo-1.0", 21
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -198,7 +199,7 @@ end
 function lib:UnitHasIncomingRes(unit)
 	if type(unit) ~= "string" then return end
 	local guid
-	if strmatch(unit, "^0x") then
+	if strmatch(unit, "^Player%-") then
 		guid = unit
 		unit = unitFromGUID[guid]
 	else
@@ -210,7 +211,7 @@ function lib:UnitHasIncomingRes(unit)
 	end
 	if hasPending[guid] then
 		local state = hasSoulstone[guid] and "SELFRES" or "PENDING"
-		--debug(2, "UnitHasIncomingRes", nameFromGUID[guid], state)
+		debug(2, "UnitHasIncomingRes", nameFromGUID[guid], state)
 		return state, hasPending[guid]
 	end
 
@@ -230,7 +231,7 @@ function lib:UnitHasIncomingRes(unit)
 		end
 	end
 	if state and firstCaster and firstEnd then
-		--debug(2, "UnitHasIncomingRes", nameFromGUID[guid], state, nameFromGUID[firstCaster])
+		debug(2, "UnitHasIncomingRes", nameFromGUID[guid], state, nameFromGUID[firstCaster])
 		return state, firstEnd, unitFromGUID[firstCaster], firstCaster
 	end
 	--debug(3, "UnitHasIncomingRes", nameFromGUID[guid], "nil")
@@ -247,7 +248,7 @@ end
 function lib:UnitIsCastingRes(unit)
 	if type(unit) ~= "string" then return end
 	local guid
-	if strmatch(unit, "^0x") then
+	if strmatch(unit, "^Player%-") then
 		guid = unit
 		unit = unitFromGUID[guid]
 	else
@@ -268,7 +269,7 @@ function lib:UnitIsCastingRes(unit)
 				break
 			end
 		end
-		--debug(2, "UnitIsCastingRes", nameFromGUID[guid], "casting on", nameFromGUID[casting.target], isFirst and "(first)" or "(duplicate)")
+		debug(2, "UnitIsCastingRes", nameFromGUID[guid], "casting on", nameFromGUID[casting.target], isFirst and "(first)" or "(duplicate)")
 		return endTime, unitFromGUID[casting.target], casting.target, isFirst
 	end
 
@@ -281,7 +282,7 @@ function lib:UnitIsCastingRes(unit)
 				break
 			end
 		end
-		--debug(2, "UnitIsCastingRes", nameFromGUID[guid], "casting Mass Res", isFirst and "(first)" or "(duplicate)")
+		debug(2, "UnitIsCastingRes", nameFromGUID[guid], "casting Mass Res", isFirst and "(first)" or "(duplicate)")
 		return endTime, nil, nil, isFirst
 	end
 
