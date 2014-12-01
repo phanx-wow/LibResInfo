@@ -13,7 +13,15 @@ Requires [LibStub](http://www.wowace.com/addons/libstub/) and [CallbackHandler-1
 
 * [API methods](https://github.com/Phanx/LibResInfo/wiki/API-Methods)
 * [Callbacks](https://github.com/Phanx/LibResInfo/wiki/Callbacks)
-* [How to embed LibResInfo in your addon](https://github.com/Phanx/LibResInfo/wiki)
+
+
+## Embedding
+
+If you are the CurseForge/WowAce packager, you should use the following URL in your .pkgmeta file:
+
+    svn://svn.wowinterface.com/LibResInfo-976/trunk/LibResInfo-1.0
+
+If you use a Git URL instead, you will get a number of irrelevant documentation and metadata files, and an extra layer of folders, since Git does not support checking out only part of the repository, and the Curse packager does not support checking out from GitHub over SVN. You're welcome to add `libresinfo` to the `tools-used` section of your .pkgmeta file so I get Curse points for the library usage, but it's not required.
 
 
 ## Additional Notes
