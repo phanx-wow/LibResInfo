@@ -16,7 +16,7 @@ local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 21
+local MAJOR, MINOR = "LibResInfo-1.0", 22
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -68,6 +68,7 @@ local resSpells = {
 	[8342]   = GetSpellInfo(8342),   -- Defibrillate (item: Goblin Jumper Cables)
 	[22999]  = GetSpellInfo(22999),  -- Defibrillate (item: Goblin Jumper Cables XL)
 	[54732]  = GetSpellInfo(54732),  -- Defibrillate (item: Gnomish Army Knife)
+	[54732]  = GetSpellInfo(164729), -- Defibrillate (item: Ultimate Gnomish Army Knife)
 	[126393] = GetSpellInfo(126393), -- Eternal Guardian (hunter pet: quilien)
 	[61999]  = GetSpellInfo(61999),  -- Raise Ally (death knight)
 	[20484]  = GetSpellInfo(20484),  -- Rebirth (druid)

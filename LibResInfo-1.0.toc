@@ -12,8 +12,6 @@
 ## X-Copyright: Copyright (c) 2012-2014 Phanx. All rights reserved.
 ## X-Website: https://github.com/Phanx/LibResInfo
 
-## OptionalDeps: LibStub, CallbackHandler-1.0
-
 LibStub\LibStub.lua
 CallbackHandler-1.0\CallbackHandler-1.0.lua
 
