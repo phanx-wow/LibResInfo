@@ -2,9 +2,9 @@
 LibResInfo-1.0
 Library to provide information about resurrections in your group.
 Copyright (c) 2012-2014 Phanx. All rights reserved.
-See the accompanying README and LICENSE files for more information.
-http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html
+https://github.com/Phanx/LibResInfo
 http://wow.curseforge.com/addons/libresinfo/
+http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html
 ------------------------------------------------------------------------
 TODO:
 * Handle Reincarnation with some guesswork?

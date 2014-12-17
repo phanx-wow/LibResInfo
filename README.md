@@ -9,19 +9,10 @@ Requires [LibStub](http://www.wowace.com/addons/libstub/) and [CallbackHandler-1
 * [Download on WoWInterface](http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html)
 
 
-## API Documentation:
+## API Documentation
 
 * [API methods](https://github.com/Phanx/LibResInfo/wiki/API-Methods)
 * [Callbacks](https://github.com/Phanx/LibResInfo/wiki/Callbacks)
-
-
-## Embedding
-
-If you are the CurseForge/WowAce packager, you should use the following URL in your .pkgmeta file:
-
-    svn://svn.wowinterface.com/LibResInfo-976/trunk/LibResInfo-1.0
-
-If you use a Git URL instead, you will get a number of irrelevant documentation and metadata files, and an extra layer of folders, since Git does not support checking out only part of the repository, and the Curse packager does not support checking out from GitHub over SVN. You're welcome to add `libresinfo` to the `tools-used` section of your .pkgmeta file so I get Curse points for the library usage, but it's not required.
 
 
 ## Additional Notes
@@ -42,3 +33,8 @@ Due to limitations of the WoW API, it is **not possible** to detect:
 * ...who a player who joins the group while casting a resurrection spell is targeting.
 * ...whether a player who joins the group while dead has a resurrection being cast on them.
 * ...whether a player who joins the group while dead has a resurrection already available.
+
+
+## License
+
+LibResInfo-1.0 is free to download and use, and its source code is freely viewable, but it is not "free software" or "open source". You may include a copy of it in other addons that make use of it as an embedded library, but you may not upload it by itself to other websites, and you may not make changes to it. If you feel something should be changed, please submit a patch!
