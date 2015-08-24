@@ -1,7 +1,7 @@
 --[[--------------------------------------------------------------------
 LibResInfo-1.0
 Library to provide information about resurrections in your group.
-Copyright (c) 2012-2014 Phanx. All rights reserved.
+Copyright (c) 2012-2015 Phanx. All rights reserved.
 https://github.com/Phanx/LibResInfo
 http://wow.curseforge.com/addons/libresinfo/
 http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html
@@ -16,7 +16,7 @@ local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 22
+local MAJOR, MINOR = "LibResInfo-1.0", 23
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0"), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -140,7 +140,7 @@ function callbacks:OnUsed(lib, callback)
 		eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 		eventFrame:RegisterEvent("UNIT_AURA")
 		eventFrame:RegisterEvent("UNIT_CONNECTION")
-		eventFrame:RegisterEvent("UNIT_HEALTH")
+		eventFrame:RegisterEvent("UNIT_FLAGS")
 		eventFrame:GROUP_ROSTER_UPDATE("OnUsed")
 	end
 	lib.callbacksInUse[callback] = true
@@ -556,8 +556,7 @@ end
 function eventFrame:UNIT_AURA(event, unit)
 	local guid = guidFromUnit[unit]
 	if not guid then return end
-	debug(5, event, unit)
-
+	--debug(5, event, unit)
 	if not isDead[guid] then
 		local stoned = UnitAura(unit, SOULSTONE)
 		if stoned ~= hasSoulstone[guid] then
@@ -567,26 +566,13 @@ function eventFrame:UNIT_AURA(event, unit)
 			hasSoulstone[guid] = stoned
 			debug(2, nameFromGUID[guid], stoned and "gained" or "lost", SOULSTONE)
 		end
-		return
-	end
-
-	if UnitIsGhost(unit) and not isGhost[guid] then
-		isGhost[guid] = true
-		if hasPending[guid] then
-			hasPending[guid] = nil
-			debug(1, ">> ResExpired", nameFromGUID[guid], "(released)")
-			callbacks:Fire("LibResInfo_ResExpired", unit, guid)
-		end
-		-- No need to check next(castingMass) and fire a UnitUpdate here
-		-- since Mass Resurrection will still hit units who released.
 	end
 end
 
 function eventFrame:UNIT_CONNECTION(event, unit)
 	local guid = guidFromUnit[unit]
 	if not guid then return end
-	debug(4, event, unit)
-
+	--debug(4, event, unit)
 	if hasPending[unit] and not UnitIsConnected(unit) then
 		hasPending[guid] = nil
 		debug(1, ">> ResExpired", nameFromGUID[guid], "(offline)")
@@ -602,14 +588,31 @@ function eventFrame:UNIT_CONNECTION(event, unit)
 	end
 end
 
-function eventFrame:UNIT_HEALTH(event, unit)
+function eventFrame:UNIT_FLAGS(event, unit)
 	local guid = guidFromUnit[unit]
 	if not guid then return end
-	debug(5, event, unit)
-
+	--debug(5, event, unit)
 	local dead = UnitIsDead(unit)
-
-	if dead and not isDead[guid] then
+	if not dead then
+		if isDead[guid] then
+			debug(2, nameFromGUID[guid], "is now alive")
+			isDead[guid] = nil
+			if hasPending[guid] then
+				isGhost[guid] = nil
+				hasPending[guid] = nil
+				debug(1, ">> ResUsed", nameFromGUID[guid])
+				callbacks:Fire("LibResInfo_ResUsed", unit, guid)
+			elseif next(castingMass) then
+				for caster, data in pairs(castingSingle) do
+					if data.target == guid then
+						return
+					end
+				end
+				debug(1, ">> UnitUpdate", nameFromGUID[guid], "(alive)")
+				callbacks:Fire("LibResInfo_UnitUpdate", unit, guid)
+			end
+		end
+	elseif not isDead[guid] then
 		debug(2, nameFromGUID[guid], "is now dead")
 		isDead[guid] = true
 		if hasSoulstone[guid] then
@@ -621,24 +624,15 @@ function eventFrame:UNIT_HEALTH(event, unit)
 			debug(1, ">> UnitUpdate", nameFromGUID[guid], "(dead)")
 			callbacks:Fire("LibResInfo_UnitUpdate", unit, guid)
 		end
-
-	elseif isDead[guid] and not dead then
-		debug(2, nameFromGUID[guid], "is now alive")
-		isDead[guid] = nil
+	elseif not isGhost[guid] and UnitIsGhost(unit) then
+		isGhost[guid] = true
 		if hasPending[guid] then
-			isGhost[guid] = nil
 			hasPending[guid] = nil
-			debug(1, ">> ResUsed", nameFromGUID[guid])
-			callbacks:Fire("LibResInfo_ResUsed", unit, guid)
-		elseif next(castingMass) then
-			for caster, data in pairs(castingSingle) do
-				if data.target == guid then
-					return
-				end
-			end
-			debug(1, ">> UnitUpdate", nameFromGUID[guid], "(alive)")
-			callbacks:Fire("LibResInfo_UnitUpdate", unit, guid)
+			debug(1, ">> ResExpired", nameFromGUID[guid], "(released)")
+			callbacks:Fire("LibResInfo_ResExpired", unit, guid)
 		end
+		-- No need to check next(castingMass) and fire a UnitUpdate here
+		-- since Mass Resurrection will still hit units who released.
 	end
 end
 
@@ -650,7 +644,7 @@ local timer, INTERVAL = 0, 0.5
 eventFrame:SetScript("OnUpdate", function(self, elapsed)
 	timer = timer + elapsed
 	if timer >= INTERVAL then
-		debug(6, "Timer update")
+		--debug(6, "Timer update")
 		if not next(hasPending) then
 			debug(4, "Nobody pending, stop timer")
 			return self:Hide()
@@ -669,11 +663,11 @@ eventFrame:SetScript("OnUpdate", function(self, elapsed)
 end)
 
 eventFrame:SetScript("OnShow", function()
-	debug(4, "Timer start")
+	--debug(4, "Timer start")
 end)
 
 eventFrame:SetScript("OnHide", function()
-	debug(4, "Timer stop")
+	--debug(4, "Timer stop")
 	timer = 0
 end)
 
