@@ -1,15 +1,3 @@
-# Miscellaneous ------------------------------------------------------------#
+LibStub
+CallbackHandler-1.0
 
-*.bak
-*.bat
-*.ods
-.svn/
-Libs/
-LibStub/
-CallbackHandler-1.0/
-
-# Windows garbage ----------------------------------------------------------#
-
-Desktop.ini
-ehthumbs.db
-Thumbs.db

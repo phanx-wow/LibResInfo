@@ -1,7 +1,7 @@
 LibResInfo-1.0
 =================
 
-LibResInfo detects resurrection spell casts and identifies who they are being cast on, and provides that information to addons through callbacks and API methods. It also supports Mass Resurrection and Soulstone. It is fully embeddable, completely locale-independent, and does not require any other players in your group to have anything installed.
+LibResInfo detects resurrection spell casts and identifies who they are being cast on, and provides that information to addons through callbacks and API methods. It supports both single and mass resurrections, as well as soulstones. It is fully embeddable, completely locale-independent, and does not require any other players in your group to have anything installed.
 
 Requires [LibStub](http://www.wowace.com/addons/libstub/) and [CallbackHandler-1.0](http://www.wowace.com/addons/callbackhandler/).
 
@@ -19,9 +19,9 @@ Requires [LibStub](http://www.wowace.com/addons/libstub/) and [CallbackHandler-1
 
 Support for Reincarnation is under consideration, but would require some guesswork, since until you actually see a shaman resurrect themselves, there's no way to tell if the ability is on cooldown or not.
 
-No callbacks are fired for players who die while Mass Resurrection is being cast, but the API will return correct information (that the player has an incoming resurrection) so if it important for your addon, just check the player's status when they die.
+No callbacks are fired for players who die while a mass res is being cast, but the API will return correct information (that the player has an incoming res) so if it important for your addon, just check the player's status when they die.
 
-No callbacks are fired for players who resurrect themselves by returning to their corpse while Mass Resurrection is the only res casting on them, but the API will (again) return correct information (that the player has no incoming resurrection) so if it important for your addon, just check the player's status when they resurrect.
+No callbacks are fired for players who resurrect themselves by returning to their corpse while a mass res is the only res casting on them, but the API will (again) return correct information (that the player has no incoming res) so if it important for your addon, just check the player's status when they resurrect.
 
 
 ## Limitations
@@ -38,3 +38,4 @@ Due to limitations of the WoW API, it is **not possible** to detect:
 ## License
 
 LibResInfo-1.0 is free to download and use, and its source code is freely viewable, but it is not "free software" or "open source". You may include a copy of it in other addons that make use of it as an embedded library, but you may not upload it by itself to other websites, and you may not make changes to it. If you feel something should be changed, please submit a patch!
+
