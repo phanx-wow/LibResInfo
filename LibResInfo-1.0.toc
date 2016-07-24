@@ -14,7 +14,7 @@
 ## X-Website: https://github.com/Phanx/LibResInfo
 
 ## LoadOnDemand: 1
-## OptionalDepdendencies: LibStub, CallbackHandler-1.0
+## OptionalDependencies: LibStub, CallbackHandler-1.0
 
 LibStub\LibStub.lua
 CallbackHandler-1.0\CallbackHandler-1.0.lua
