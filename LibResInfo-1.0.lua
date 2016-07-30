@@ -64,28 +64,33 @@ local RELEASE_PENDING_TIME = 360
 local SOULSTONE = GetSpellInfo(20707)
 
 local singleSpells = {
-	[2008]   = GetSpellInfo(2008),   -- Ancestral Spirit (shaman)
-	[8342]   = GetSpellInfo(8342),   -- Defibrillate (item: Goblin Jumper Cables)
-	[22999]  = GetSpellInfo(22999),  -- Defibrillate (item: Goblin Jumper Cables XL)
-	[54732]  = GetSpellInfo(54732),  -- Defibrillate (item: Gnomish Army Knife)
-	[164729] = GetSpellInfo(164729), -- Defibrillate (item: Ultimate Gnomish Army Knife)
-	[126393] = GetSpellInfo(126393), -- Eternal Guardian (hunter pet: quilien)
-	[61999]  = GetSpellInfo(61999),  -- Raise Ally (death knight)
-	[20484]  = GetSpellInfo(20484),  -- Rebirth (druid)
-	[7328]   = GetSpellInfo(7328),   -- Redemption (paladin)
-	[2006]   = GetSpellInfo(2006),   -- Resurrection (priest)
-	[115178] = GetSpellInfo(115178), -- Resuscitate (monk)
-	[50769]  = GetSpellInfo(50769),  -- Revive (druid)
-	[982]    = GetSpellInfo(982),    -- Revive Pet (hunter)
-	[20707]  = GetSpellInfo(20707),  -- Soulstone (warlock)
+	-- Class Abilities
+	[2008]   = GetSpellInfo(2008),   -- Ancestral Spirit (Shaman)
+	[61999]  = GetSpellInfo(61999),  -- Raise Ally (Death Knight)
+	[20484]  = GetSpellInfo(20484),  -- Rebirth (Druid)
+	[7328]   = GetSpellInfo(7328),   -- Redemption (Paladin)
+	[2006]   = GetSpellInfo(2006),   -- Resurrection (Priest)
+	[115178] = GetSpellInfo(115178), -- Resuscitate (Monk)
+	[50769]  = GetSpellInfo(50769),  -- Revive (Druid)
+	[982]    = GetSpellInfo(982),    -- Revive Pet (Hunter)
+	[20707]  = GetSpellInfo(20707),  -- Soulstone (Warlock)
+	-- Hunter Pet Abilities
+	[126393] = GetSpellInfo(126393), -- Eternal Guardian (Quilien)
+	-- Items
+	[8342]   = GetSpellInfo(8342),   -- Defibrillate (Goblin Jumper Cables)
+	[22999]  = GetSpellInfo(22999),  -- Defibrillate (Goblin Jumper Cables XL)
+	[54732]  = GetSpellInfo(54732),  -- Defibrillate (Gnomish Army Knife)
+	[164729] = GetSpellInfo(164729), -- Defibrillate (Ultimate Gnomish Army Knife)
+	[199119] = GetSpellInfo(199119), -- Failure Detection Aura (Failure Detection Pylon) -- NEEDS CHECK
+	[187777] = GetSpellInfo(187777), -- Reawaken (Brazier of Awakening)
 }
 
 local massSpells = {
-	[212056] = GetSpellInfo(212056), -- Absolution (paladin)
-	[212048] = GetSpellInfo(212048), -- Ancestral Vision (shaman)
-	[212036] = GetSpellInfo(212036), -- Mass Resurrection (priest)
-	[212051] = GetSpellInfo(212051), -- Reawaken (monk)
-	[212040] = GetSpellInfo(212040), -- Revitalize (druid)
+	[212056] = GetSpellInfo(212056), -- Absolution (Holy Paladin)
+	[212048] = GetSpellInfo(212048), -- Ancestral Vision (Restoration Shaman)
+	[212036] = GetSpellInfo(212036), -- Mass Resurrection (Discipline/Holy Priest)
+	[212051] = GetSpellInfo(212051), -- Reawaken (Mistweaver Monk)
+	[212040] = GetSpellInfo(212040), -- Revitalize (Restoration Druid)
 }
 
 ------------------------------------------------------------------------
