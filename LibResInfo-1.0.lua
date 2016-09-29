@@ -25,39 +25,39 @@ if not lib then return end
 
 ------------------------------------------------------------------------
 
-local callbacks     = lib.callbacks     or LibStub("CallbackHandler-1.0"):New(lib)
-local eventFrame    = lib.eventFrame    or CreateFrame("Frame")
+local callbacks        = lib.callbacks        or LibStub("CallbackHandler-1.0"):New(lib)
+local eventFrame       = lib.eventFrame       or CreateFrame("Frame")
 
-local guidFromUnit  = lib.guidFromUnit  or {} -- t[unit] = guid -- table lookup is faster than calling UnitGUID
-local nameFromGUID  = lib.nameFromGUID  or {} -- t[guid] = name
-local unitFromGUID  = lib.unitFromGUID  or {} -- t[guid] = unit
+local guidFromUnit     = lib.guidFromUnit     or {} -- t[unit] = guid -- table lookup is faster than calling UnitGUID
+local nameFromGUID     = lib.nameFromGUID     or {} -- t[guid] = name
+local unitFromGUID     = lib.unitFromGUID     or {} -- t[guid] = unit
 
-local castingSingle = lib.castingSingle or {} -- t[casterGUID] = { startTime = <number>, endTime = <number>, target = <guid> }
-local castingMass   = lib.castingMass   or {} -- t[casterGUID] = endTime
-local hasPending    = lib.hasPending    or {} -- t[targetGUID] = endTime
+local castingSingle    = lib.castingSingle    or {} -- t[casterGUID] = { startTime = <number>, endTime = <number>, target = <guid> }
+local castingMass      = lib.castingMass      or {} -- t[casterGUID] = endTime
+local hasPending       = lib.hasPending       or {} -- t[targetGUID] = endTime
 
-local hasSoulstone  = lib.hasSoulstone  or {} -- t[targetGUID] = <boolean>
+local hasSoulstone     = lib.hasSoulstone     or {} -- t[targetGUID] = <boolean>
 local hasReincarnation = lib.hasReincarnation or {} -- t[targetGUID] = <boolean>
-local isDead        = lib.isDead        or {} -- t[targetGUID] = <boolean>
-local isGhost       = lib.isGhost       or {} -- t[targetGUID] = <boolean>
+local isDead           = lib.isDead           or {} -- t[targetGUID] = <boolean>
+local isGhost          = lib.isGhost          or {} -- t[targetGUID] = <boolean>
 
 ------------------------------------------------------------------------
 
-lib.callbacks       = callbacks
-lib.eventFrame      = eventFrame
+lib.callbacks          = callbacks
+lib.eventFrame         = eventFrame
 
-lib.guidFromUnit    = guidFromUnit
-lib.nameFromGUID    = nameFromGUID
-lib.unitFromGUID    = unitFromGUID
+lib.guidFromUnit       = guidFromUnit
+lib.nameFromGUID       = nameFromGUID
+lib.unitFromGUID       = unitFromGUID
 
-lib.castingSingle   = castingSingle
-lib.castingMass     = castingMass
-lib.hasPending      = hasPending
+lib.castingSingle      = castingSingle
+lib.castingMass        = castingMass
+lib.hasPending         = hasPending
 
-lib.hasSoulstone    = hasSoulstone
+lib.hasSoulstone       = hasSoulstone
 lib.hasReincarnation   = hasReincarnation
-lib.isDead          = isDead
-lib.isGhost         = isGhost
+lib.isDead             = isDead
+lib.isGhost            = isGhost
 
 ------------------------------------------------------------------------
 
