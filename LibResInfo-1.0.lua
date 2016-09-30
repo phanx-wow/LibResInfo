@@ -589,14 +589,14 @@ function eventFrame:UNIT_AURA(event, unit)
 			hasPending[guid] = endTime
 			debug(1, ">> ResPending", nameFromGUID[guid], REINCARNATION)
 			callbacks:Fire("LibResInfo_ResPending", unit, guid, endTime, true)
-		end
-
-		-- Rebirth, Raise Dead, Soulstone and Eternal Guardian leaves a debuff on the resurrected target
-		local resurrecting, _, _, _, _, _, expires = UnitAura(unit, RESURRECTING, nil, 'HARMFUL')
-		if resurrecting ~= hasPending[guid] then
-			hasPending[guid] = resurrecting
-			debug(1, ">> ResPending", nameFromGUID[guid], RESURRECTING)
-			callbacks:Fire("LibResInfo_ResPending", unit, guid, expires)
+		else
+			-- Rebirth, Raise Dead, Soulstone and Eternal Guardian leaves a debuff on the resurrected target
+			local resurrecting, _, _, _, _, _, expires = UnitAura(unit, RESURRECTING, nil, 'HARMFUL')
+			if resurrecting ~= hasPending[guid] then
+				hasPending[guid] = resurrecting
+				debug(1, ">> ResPending", nameFromGUID[guid], RESURRECTING)
+				callbacks:Fire("LibResInfo_ResPending", unit, guid, expires)
+			end
 		end
 	end
 end
