@@ -156,6 +156,7 @@ function callbacks:OnUsed(lib, callback)
 		eventFrame:RegisterEvent("UNIT_AURA")
 		eventFrame:RegisterEvent("UNIT_CONNECTION")
 		eventFrame:RegisterEvent("UNIT_FLAGS")
+		eventFrame:RegisterEvent("RESURRECT_REQUEST")
 		eventFrame:GROUP_ROSTER_UPDATE("OnUsed")
 	end
 	lib.callbacksInUse[callback] = true
@@ -565,6 +566,38 @@ function eventFrame:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, h
 		-- Seems unlikely that multiple casts would end so close together that this would be an issue.
 		debug(3, "Nobody casting, unregistering CLEU")
 		self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+	end
+end
+
+function eventFrame:RESURRECT_REQUEST(event, casterName)
+	local caster = UnitGUID(casterName)
+	if castingMass[caster] then
+		castingMass[caster] = nil
+		debug(1, ">> MassResFinished", nameFromGUID[caster])
+		callbacks:Fire("LibResInfo_MassResFinished", unitFromGUID[caster], caster)
+	end
+
+	local target = guidFromUnit.player
+	local endTime = GetTime() + RESURRECT_PENDING_TIME
+	hasPending[target] = endTime
+
+	self:Show()
+
+	debug(1, ">> ResPending", "on", nameFromGUID[target], "by", nameFromGUID[caster])
+	callbacks:Fire("LibResInfo_ResPending", "player", target, endTime)
+
+	-- UNIT_FLAGS doesn't fire for the player after he accepts a resurrect after releasing
+	self:RegisterEvent('UNIT_HEALTH')
+end
+
+function eventFrame:UNIT_HEALTH(event, unit)
+	local guid = guidFromUnit[unit]
+	if hasPending[guid] and not UnitIsDeadOrGhost(unit) then
+		hasPending[guid] = nil
+		debug(1, ">> ResUsed", nameFromGUID[guid])
+		callbacks:Fire("LibResInfo_ResUsed", unit, guid)
+
+		self:UnregisterEvent(event)
 	end
 end
 
