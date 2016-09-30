@@ -25,43 +25,46 @@ if not lib then return end
 
 ------------------------------------------------------------------------
 
-local callbacks     = lib.callbacks     or LibStub("CallbackHandler-1.0"):New(lib)
-local eventFrame    = lib.eventFrame    or CreateFrame("Frame")
+local callbacks        = lib.callbacks        or LibStub("CallbackHandler-1.0"):New(lib)
+local eventFrame       = lib.eventFrame       or CreateFrame("Frame")
 
-local guidFromUnit  = lib.guidFromUnit  or {} -- t[unit] = guid -- table lookup is faster than calling UnitGUID
-local nameFromGUID  = lib.nameFromGUID  or {} -- t[guid] = name
-local unitFromGUID  = lib.unitFromGUID  or {} -- t[guid] = unit
+local guidFromUnit     = lib.guidFromUnit     or {} -- t[unit] = guid -- table lookup is faster than calling UnitGUID
+local nameFromGUID     = lib.nameFromGUID     or {} -- t[guid] = name
+local unitFromGUID     = lib.unitFromGUID     or {} -- t[guid] = unit
 
-local castingSingle = lib.castingSingle or {} -- t[casterGUID] = { startTime = <number>, endTime = <number>, target = <guid> }
-local castingMass   = lib.castingMass   or {} -- t[casterGUID] = endTime
-local hasPending    = lib.hasPending    or {} -- t[targetGUID] = endTime
+local castingSingle    = lib.castingSingle    or {} -- t[casterGUID] = { startTime = <number>, endTime = <number>, target = <guid> }
+local castingMass      = lib.castingMass      or {} -- t[casterGUID] = endTime
+local hasPending       = lib.hasPending       or {} -- t[targetGUID] = endTime
 
-local hasSoulstone  = lib.hasSoulstone  or {} -- t[targetGUID] = <boolean>
-local isDead        = lib.isDead        or {} -- t[targetGUID] = <boolean>
-local isGhost       = lib.isGhost       or {} -- t[targetGUID] = <boolean>
+local hasSoulstone     = lib.hasSoulstone     or {} -- t[targetGUID] = <boolean>
+local hasReincarnation = lib.hasReincarnation or {} -- t[targetGUID] = <boolean>
+local isDead           = lib.isDead           or {} -- t[targetGUID] = <boolean>
+local isGhost          = lib.isGhost          or {} -- t[targetGUID] = <boolean>
 
 ------------------------------------------------------------------------
 
-lib.callbacks       = callbacks
-lib.eventFrame      = eventFrame
+lib.callbacks          = callbacks
+lib.eventFrame         = eventFrame
 
-lib.guidFromUnit    = guidFromUnit
-lib.nameFromGUID    = nameFromGUID
-lib.unitFromGUID    = unitFromGUID
+lib.guidFromUnit       = guidFromUnit
+lib.nameFromGUID       = nameFromGUID
+lib.unitFromGUID       = unitFromGUID
 
-lib.castingSingle   = castingSingle
-lib.castingMass     = castingMass
-lib.hasPending      = hasPending
+lib.castingSingle      = castingSingle
+lib.castingMass        = castingMass
+lib.hasPending         = hasPending
 
-lib.hasSoulstone    = hasSoulstone
-lib.isDead          = isDead
-lib.isGhost         = isGhost
+lib.hasSoulstone       = hasSoulstone
+lib.hasReincarnation   = hasReincarnation
+lib.isDead             = isDead
+lib.isGhost            = isGhost
 
 ------------------------------------------------------------------------
 
 local RESURRECT_PENDING_TIME = 60
 local RELEASE_PENDING_TIME = 360
 local SOULSTONE = GetSpellInfo(20707)
+local REINCARNATION = GetSpellInfo(225080)
 
 local singleSpells = {
 	-- Class Abilities
@@ -173,6 +176,7 @@ function callbacks:OnUnused(lib, callback)
 		wipe(castingMass)
 		wipe(hasPending)
 		wipe(hasSoulstone)
+		wipe(hasReincarnation)
 		wipe(isDead)
 		wipe(isGhost)
 	end
@@ -223,7 +227,7 @@ function lib:UnitHasIncomingRes(unit)
 		return
 	end
 	if hasPending[guid] then
-		local state = hasSoulstone[guid] and "SELFRES" or "PENDING"
+		local state = (hasSoulstone[guid] or hasReincarnation[guid]) and "SELFRES" or "PENDING"
 		debug(2, "UnitHasIncomingRes", nameFromGUID[guid], state)
 		return state, hasPending[guid]
 	end
@@ -578,6 +582,17 @@ function eventFrame:UNIT_AURA(event, unit)
 			end
 			hasSoulstone[guid] = stoned
 			debug(2, nameFromGUID[guid], stoned and "gained" or "lost", SOULSTONE)
+		end
+	else
+		local reincarnation = UnitAura(unit, REINCARNATION, nil, 'HARMFUL')
+		if reincarnation ~= hasReincarnation[guid] then
+			hasReincarnation[guid] = reincarnation
+			debug(2, nameFromGUID[guid], reincarnation and "active" or "inactive", REINCARNATION)
+
+			local endTime = GetTime() + RELEASE_PENDING_TIME
+			hasPending[guid] = endTime
+			debug(1, '>> ResPending', nameFromGUID[guid], REINCARNATION)
+			callbacks:Fire("LibResInfo_ResPending", unit, guid, endTime, true)
 		end
 	end
 end
