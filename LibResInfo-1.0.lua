@@ -639,6 +639,12 @@ function eventFrame:UNIT_FLAGS(event, unit)
 				debug(1, ">> UnitUpdate", nameFromGUID[guid], "(alive)")
 				callbacks:Fire("LibResInfo_UnitUpdate", unit, guid)
 			end
+		elseif hasPending[guid] or hasReincarnation[guid] then
+			hasPending[guid] = nil
+			hasReincarnation[guid] = nil
+
+			debug(1, ">> UnitUpdate", nameFromGUID[guid], "(alive)")
+			callbacks:Fire("LibResInfo_UnitUpdate", unit, guid)
 		end
 	elseif not isDead[guid] then
 		debug(2, nameFromGUID[guid], "is now dead")
