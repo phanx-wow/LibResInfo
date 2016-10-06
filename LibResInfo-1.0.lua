@@ -65,20 +65,16 @@ local RESURRECT_PENDING_TIME = 60
 local RELEASE_PENDING_TIME = 360
 local SOULSTONE = GetSpellInfo(20707)
 local REINCARNATION = GetSpellInfo(225080)
+local RESURRECTING = GetSpellInfo(160029)
 
 local singleSpells = {
 	-- Class Abilities
 	[2008]   = GetSpellInfo(2008),   -- Ancestral Spirit (Shaman)
-	[61999]  = GetSpellInfo(61999),  -- Raise Ally (Death Knight)
-	[20484]  = GetSpellInfo(20484),  -- Rebirth (Druid)
 	[7328]   = GetSpellInfo(7328),   -- Redemption (Paladin)
 	[2006]   = GetSpellInfo(2006),   -- Resurrection (Priest)
 	[115178] = GetSpellInfo(115178), -- Resuscitate (Monk)
 	[50769]  = GetSpellInfo(50769),  -- Revive (Druid)
 	[982]    = GetSpellInfo(982),    -- Revive Pet (Hunter)
-	[20707]  = GetSpellInfo(20707),  -- Soulstone (Warlock)
-	-- Hunter Pet Abilities
-	[126393] = GetSpellInfo(126393), -- Eternal Guardian (Quilien)
 	-- Items
 	[8342]   = GetSpellInfo(8342),   -- Defibrillate (Goblin Jumper Cables)
 	[22999]  = GetSpellInfo(22999),  -- Defibrillate (Goblin Jumper Cables XL)
@@ -593,6 +589,14 @@ function eventFrame:UNIT_AURA(event, unit)
 			hasPending[guid] = endTime
 			debug(1, ">> ResPending", nameFromGUID[guid], REINCARNATION)
 			callbacks:Fire("LibResInfo_ResPending", unit, guid, endTime, true)
+		else
+			-- Rebirth, Raise Dead, Soulstone and Eternal Guardian leaves a debuff on the resurrected target
+			local resurrecting, _, _, _, _, _, expires = UnitAura(unit, RESURRECTING, nil, 'HARMFUL')
+			if resurrecting ~= hasPending[guid] then
+				hasPending[guid] = resurrecting
+				debug(1, ">> ResPending", nameFromGUID[guid], RESURRECTING)
+				callbacks:Fire("LibResInfo_ResPending", unit, guid, expires)
+			end
 		end
 	end
 end
