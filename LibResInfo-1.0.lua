@@ -615,10 +615,8 @@ function eventFrame:UNIT_AURA(event, unit)
 	else
 		local reincarnation = UnitAura(unit, REINCARNATION, nil, "HARMFUL")
 		if reincarnation ~= hasReincarnation[guid] then
-			hasReincarnation[guid] = reincarnation
-			debug(2, nameFromGUID[guid], reincarnation and "active" or "inactive", REINCARNATION)
-
 			local endTime = GetTime() + RELEASE_PENDING_TIME
+			hasReincarnation[guid] = reincarnation
 			hasPending[guid] = endTime
 			debug(1, ">> ResPending", nameFromGUID[guid], REINCARNATION)
 			callbacks:Fire("LibResInfo_ResPending", unit, guid, endTime, true)
