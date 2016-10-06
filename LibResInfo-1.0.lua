@@ -2,6 +2,8 @@
 	LibResInfo-1.0
 	Library to provide information about resurrections in your group.
 	https://github.com/Phanx/LibResInfo
+	https://wow.curseforge.com/addons/libresinfo
+	http://www.wowinterface.com/downloads/info21467
 
 	Copyright (c) 2012-2016 Phanx. All rights reserved.
 	Redistribution as an unmodified embedded library is permitted.
@@ -206,7 +208,7 @@ end
 --	* resType is one of:
 --   - SELFRES if the unit has a Soulstone or other self-res ability available,
 --   - PENDING if the unit already has a res available to accept, or
---	  - CASTING if a res is being cast on the unit.
+--   - CASTING if a res is being cast on the unit.
 --	* caster and casterGUID are nil if the unit is being mass-ressed.
 ------------------------------------------------------------------------
 

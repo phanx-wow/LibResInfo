@@ -3,9 +3,9 @@ LibResInfo-1.0
 
 LibResInfo detects resurrection spell casts and identifies who they are being cast on, and provides that information to addons through callbacks and API methods. It supports both single and mass resurrections, as well as soulstones. It is fully embeddable, completely locale-independent, and does not require any other players in your group to have anything installed.
 
-Requires [LibStub](http://www.wowace.com/addons/libstub/) and [CallbackHandler-1.0](http://www.wowace.com/addons/callbackhandler/).
+Requires [LibStub](https://www.wowace.com/addons/libstub/) and [CallbackHandler-1.0](https://www.wowace.com/addons/callbackhandler/).
 
-* [Download on CurseForge](http://wow.curseforge.com/addons/libresinfo/)
+* [Download on CurseForge](https://wow.curseforge.com/addons/libresinfo/)
 * [Download on WoWInterface](http://www.wowinterface.com/downloads/info21467-LibResInfo-1.0.html)
 
 
@@ -38,4 +38,3 @@ Due to limitations of the WoW API, it is **not possible** to detect:
 ## License
 
 LibResInfo-1.0 is free to download and use, and its source code is freely viewable, but it is not "free software" or "open source". You may include a copy of it in other addons that make use of it as an embedded library, but you may not upload it by itself to other websites, and you may not make changes to it. If you feel something should be changed, please submit a patch!
-

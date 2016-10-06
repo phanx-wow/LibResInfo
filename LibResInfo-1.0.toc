@@ -12,11 +12,13 @@
 ## X-Category: Library
 ## X-Copyright: Copyright (c) 2012-2016 Phanx. All rights reserved.
 ## X-Website: https://github.com/Phanx/LibResInfo
+## X-Curse-Project-ID: libresinfo
+## X-WoWI-ID: 21467
 
 ## LoadOnDemand: 1
 ## OptionalDependencies: LibStub, CallbackHandler-1.0
 
-LibStub\LibStub.lua
-CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
 
 LibResInfo-1.0.lua
