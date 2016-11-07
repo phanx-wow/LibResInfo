@@ -626,7 +626,7 @@ function eventFrame:UNIT_AURA(event, unit)
 			-- Rebirth, Raise Dead, Soulstone and Eternal Guardian leaves a debuff on the resurrected target
 			local resurrecting, _, _, _, _, _, expires = UnitAura(unit, RESURRECTING, nil, "HARMFUL")
 			if resurrecting ~= hasPending[guid] then
-				hasPending[guid] = resurrecting
+				hasPending[guid] = expires
 				debug(1, ">> ResPending", nameFromGUID[guid], RESURRECTING)
 				callbacks:Fire("LibResInfo_ResPending", unit, guid, expires)
 			end
