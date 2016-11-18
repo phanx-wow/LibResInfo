@@ -322,13 +322,14 @@ function eventFrame:GROUP_ROSTER_UPDATE(event)
 	-- Update guid <==> unit mappings:
 	wipe(guidFromUnit)
 	wipe(unitFromGUID)
+
+	AddUnit("player")
 	if IsInRaid() then
 		for i = 1, GetNumGroupMembers() do
 			AddUnit("raid"..i)
 			AddUnit("raidpet"..i)
 		end
 	else
-		AddUnit("player")
 		AddUnit("pet")
 		if IsInGroup() then
 			for i = 1, GetNumGroupMembers() - 1 do
