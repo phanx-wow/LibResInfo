@@ -19,7 +19,7 @@ local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 24
+local MAJOR, MINOR = "LibResInfo-1.0", 25
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0", true), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -207,8 +207,9 @@ end
 --	* All returns are nil if no res is being cast on the unit.
 --	* resType is one of:
 --   - SELFRES if the unit has a Soulstone or other self-res ability available,
---   - PENDING if the unit already has a res available to accept, or
---   - CASTING if a res is being cast on the unit.
+--   - PENDING if the unit already has a res available to accept,
+--   - CASTING if a res is being cast on the unit, or
+--   - MASSRES if a mass res is being cast.
 --	* caster and casterGUID are nil if the unit is being mass-ressed.
 ------------------------------------------------------------------------
 
@@ -575,7 +576,7 @@ function eventFrame:RESURRECT_REQUEST(event, casterName)
 		callbacks:Fire("LibResInfo_MassResFinished", unitFromGUID[caster], caster)
 	end
 
-	local target = guidFromUnit.player
+	local target = UnitGUID("player") -- guidFromUnit["player"] will be nil in a raid
 	local endTime = GetTime() + RESURRECT_PENDING_TIME
 	hasPending[target] = endTime
 
@@ -584,12 +585,12 @@ function eventFrame:RESURRECT_REQUEST(event, casterName)
 	debug(1, ">> ResPending", "on", nameFromGUID[target], "by", nameFromGUID[caster])
 	callbacks:Fire("LibResInfo_ResPending", "player", target, endTime)
 
-	-- UNIT_FLAGS doesn't fire for the player after he accepts a resurrect after releasing
-	self:RegisterEvent('UNIT_HEALTH')
+	-- UNIT_FLAGS doesn't fire for the player when accepting a resurrect after releasing
+	self:RegisterEvent("UNIT_HEALTH")
 end
 
 function eventFrame:UNIT_HEALTH(event, unit)
-	local guid = guidFromUnit[unit]
+	local guid = unit and guidFromUnit[unit] -- UNIT_HEALTH can fire with nil unit in 7.1
 	if hasPending[guid] and not UnitIsDeadOrGhost(unit) then
 		hasPending[guid] = nil
 		debug(1, ">> ResUsed", nameFromGUID[guid])
