@@ -723,11 +723,13 @@ eventFrame:SetScript("OnUpdate", function(self, elapsed)
 		end
 		local now = GetTime()
 		for guid, endTime in pairs(hasPending) do
-			if endTime - now < INTERVAL then -- It will expire before the next update.
-				local unit = unitFromGUID[guid]
-				hasPending[guid] = nil
-				debug(1, ">> ResExpired", nameFromGUID[guid])
-				callbacks:Fire("LibResInfo_ResExpired", unit, guid, true)
+                        if type(endTime) == "number" then
+			    if endTime - now < INTERVAL then -- It will expire before the next update.
+				    local unit = unitFromGUID[guid]
+				    hasPending[guid] = nil
+				    debug(1, ">> ResExpired", nameFromGUID[guid])
+				    callbacks:Fire("LibResInfo_ResExpired", unit, guid, true)
+                            end
 			end
 		end
 		timer = 0
