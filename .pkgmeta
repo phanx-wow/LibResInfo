@@ -6,6 +6,7 @@ ignore:
    - README.md
 
 externals:
-   Libs/CallbackHandler-1.0: svn://svn.wowace.com/wow/callbackhandler/mainline/trunk/CallbackHandler-1.0
-   Libs/LibStub: svn://svn.wowace.com/wow/libstub/mainline/tags/1.0
-
+   Libs/CallbackHandler-1.0: https://repos.wowace.com/wow/callbackhandler/trunk/CallbackHandler-1.0
+   Libs/LibStub:
+      url: https://repos.wowace.com/wow/libstub/trunk
+      tag: 1.0
