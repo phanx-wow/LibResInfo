@@ -1,4 +1,4 @@
-## Interface: 70100
+## Interface: 70300
 ## Version: @project-version@
 
 ## Title: Lib: ResInfo-1.0
@@ -10,9 +10,9 @@
 ## Author: Phanx
 ## X-Email: addons@phanx.net
 ## X-Category: Library
-## X-Copyright: Copyright (c) 2012-2016 Phanx. All rights reserved.
-## X-Website: https://github.com/Phanx/LibResInfo
-## X-Curse-Project-ID: libresinfo
+## X-License: zlib License
+## X-Website: https://github.com/phanx-wow/LibResInfo
+## X-Curse-Project-ID: 43713
 ## X-WoWI-ID: 21467
 
 ## LoadOnDemand: 1
