@@ -796,7 +796,7 @@ if GetAddOnMetadata("LibResInfo-1.0", "Version") then
 			return
 		end
 
-		debug(0, "Usage:")
+		debug(0, "Version " .. MINOR .. " loaded. Usage:")
 		debug(0, NORMAL_FONT_COLOR_CODE .. "/lri " .. DEBUG_LEVEL .. "|r - change debug verbosity, valid range is 0-6")
 		debug(0, NORMAL_FONT_COLOR_CODE .. "/lri " .. of:GetName() .. "|r - change debug output frame")
 
