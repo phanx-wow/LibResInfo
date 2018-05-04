@@ -9,16 +9,16 @@
 	* Clear data when releasing spirit
 ----------------------------------------------------------------------]]
 
-local DEBUG_LEVEL = GetAddOnMetadata("LibResInfo-1.0", "Version") and 1 or 0
-local DEBUG_FRAME = ChatFrame3
-
-------------------------------------------------------------------------
-
 local MAJOR, MINOR = "LibResInfo-1.0", 26
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0", true), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
+
+------------------------------------------------------------------------
+
+local DEBUG_LEVEL = GetAddOnMetadata("LibResInfo-1.0", "Version") and 1 or 0
+local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
@@ -764,25 +764,42 @@ end)
 
 ------------------------------------------------------------------------
 
-SLASH_LIBRESINFO1 = "/lri"
-SlashCmdList.LIBRESINFO = function(input)
-	input = gsub(input, "[^A-Za-z0-9]", "")
-	if strlen(input) < 1 then return end
-	if strmatch(input, "%D") then
+if GetAddOnMetadata("LibResInfo-1.0", "Version") then
+	SLASH_LIBRESINFO1 = "/lri"
+	SlashCmdList.LIBRESINFO = function(input)
+		input = tostring(input or "")
+
+		local CURRENT_CHAT_FRAME
+		for i = 1, 10 do
+			local cf = _G["ChatFrame"..i]
+			if cf and cf:IsVisible() then
+				CURRENT_CHAT_FRAME = cf
+				break
+			end
+		end
+
+		local of = DEBUG_FRAME
+		DEBUG_FRAME = CURRENT_CHAT_FRAME
+
+		if string.match(input, "^%s*[0-9]%s*$") then
+			local v = tonumber(input)
+			debug(0, "Debug level set to", input)
+			DEBUG_LEVEL = v
+			DEBUG_FRAME = of
+			return
+		end
+
 		local f = _G[input]
 		if type(f) == "table" and type(f.AddMessage) == "function" then
-			DEBUG_FRAME = f
 			debug(0, "Debug frame set to", input)
-		else
-			debug(0, input, "is not a valid debug output frame!")
+			DEBUG_FRAME = f
+			return
 		end
-	else
-		local v = tonumber(input)
-		if v and v >= 0 then
-			DEBUG_LEVEL = v
-			debug(0, "Debug level set to", input)
-		else
-			debug(0, input, "is not a valid debug level!")
-		end
+
+		debug(0, "Usage:")
+		debug(0, NORMAL_FONT_COLOR_CODE .. "/lri " .. DEBUG_LEVEL .. "|r - change debug verbosity, valid range is 0-6")
+		debug(0, NORMAL_FONT_COLOR_CODE .. "/lri " .. of:GetName() .. "|r - change debug output frame")
+
+		DEBUG_FRAME = of
 	end
 end
