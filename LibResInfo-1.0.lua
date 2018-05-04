@@ -14,7 +14,7 @@ local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
-local MAJOR, MINOR = "LibResInfo-1.0", 25
+local MAJOR, MINOR = "LibResInfo-1.0", 26
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0", true), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -57,6 +57,8 @@ lib.isDead             = isDead
 lib.isGhost            = isGhost
 
 ------------------------------------------------------------------------
+
+local IS_WOW_8 = GetBuildInfo():sub(1, 1) == "8"
 
 local RESURRECT_PENDING_TIME = 60
 local RELEASE_PENDING_TIME = 360
@@ -125,6 +127,28 @@ do
 	function remTable(t)
 		pool[wipe(t)] = true
 		return nil
+	end
+end
+
+local function UnitAuraByName(unit, searchName, filter)
+	-- Helper function to accommodate changes in WoW 8.0:
+	-- UnitAura no longer accepts an aura name, so we have to scan all auras and check their names to find the one we want
+	-- UnitAura no longer returns a spell rank (arg2)
+	for i = 1, 40 do
+		local name, rank, texture, count, debuffType, duration, expirationTime, unitCaster, canStealOrPurge, nameplateShowPersonal, spellId, canApplyAura, isBossDebuff, isCastByPlayer, nameplateShowAll, timeMod
+		if IS_WOW_8 then
+			-- rank removed, other args shifted left
+			name, texture, count, debuffType, duration, expirationTime, unitCaster, canStealOrPurge, nameplateShowPersonal, spellId, canApplyAura, isBossDebuff, isCastByPlayer, nameplateShowAll, timeMod = UnitAura(unit, i, filter)
+		else
+			name, rank, texture, count, debuffType, duration, expirationTime, unitCaster, canStealOrPurge, nameplateShowPersonal, spellId, canApplyAura, isBossDebuff, isCastByPlayer, nameplateShowAll, timeMod = UnitAura(unit, i, filter)
+		end
+
+		if not name then
+			break
+		elseif name == searchName then
+			-- rank excluded in either case
+			return name, texture, count, debuffType, duration, expirationTime, unitCaster, canStealOrPurge, nameplateShowPersonal, spellId, canApplyAura, isBossDebuff, isCastByPlayer, nameplateShowAll, timeMod
+		end
 	end
 end
 
@@ -602,7 +626,7 @@ function eventFrame:UNIT_AURA(event, unit)
 	if not guid then return end
 	--debug(5, event, unit)
 	if not isDead[guid] then
-		local stoned = UnitAura(unit, SOULSTONE)
+		local stoned = UnitAuraByName(unit, SOULSTONE)
 		if stoned ~= hasSoulstone[guid] then
 			if not stoned and UnitHealth(unit) <= 1 then
 				return
@@ -611,7 +635,7 @@ function eventFrame:UNIT_AURA(event, unit)
 			debug(2, nameFromGUID[guid], stoned and "gained" or "lost", SOULSTONE)
 		end
 	else
-		local reincarnation = UnitAura(unit, REINCARNATION, nil, "HARMFUL")
+		local reincarnation = UnitAuraByName(unit, REINCARNATION, "HARMFUL")
 		if reincarnation ~= hasReincarnation[guid] then
 			local endTime = GetTime() + RELEASE_PENDING_TIME
 			hasReincarnation[guid] = reincarnation
@@ -620,7 +644,7 @@ function eventFrame:UNIT_AURA(event, unit)
 			callbacks:Fire("LibResInfo_ResPending", unit, guid, endTime, true)
 		else
 			-- Rebirth, Raise Dead, Soulstone and Eternal Guardian leaves a debuff on the resurrected target
-			local resurrecting, _, _, _, _, _, expires = UnitAura(unit, RESURRECTING, nil, "HARMFUL")
+			local resurrecting, _, _, _, _, expires = UnitAuraByName(unit, RESURRECTING, "HARMFUL")
 			if resurrecting ~= hasPending[guid] then
 				hasPending[guid] = expires
 				debug(1, ">> ResPending", nameFromGUID[guid], RESURRECTING)
