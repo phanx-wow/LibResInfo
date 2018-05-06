@@ -9,6 +9,8 @@
 	* Clear data when releasing spirit
 ----------------------------------------------------------------------]]
 
+local IS_WOW_8 = GetBuildInfo():match("^8")
+
 local MAJOR, MINOR = "LibResInfo-1.0", 26
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0", true), MAJOR.." requires CallbackHandler-1.0")
@@ -57,8 +59,6 @@ lib.isDead             = isDead
 lib.isGhost            = isGhost
 
 ------------------------------------------------------------------------
-
-local IS_WOW_8 = GetBuildInfo():sub(1, 1) == "8"
 
 local RESURRECT_PENDING_TIME = 60
 local RELEASE_PENDING_TIME = 360
@@ -475,7 +475,13 @@ function eventFrame:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 	if not guid then return end
 	debug(3, event, nameFromGUID[guid], "casting", spellName)
 
-	local _, _, _, _, startTime, endTime = UnitCastingInfo(unit)
+	local startTime, endTime, _
+	if IS_WOW_8 then
+		_, _, _, startTime, endTime = UnitCastingInfo(unit)
+	else
+		_, _, _, _, startTime, endTime = UnitCastingInfo(unit)
+	end
+
 	if resType == "mass" then
 		castingMass[guid] = endTime / 1000
 		debug(1, ">> MassResStarted", nameFromGUID[guid])
