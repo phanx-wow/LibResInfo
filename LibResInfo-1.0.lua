@@ -467,13 +467,20 @@ end
 
 ------------------------------------------------------------------------
 
-function eventFrame:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
+function eventFrame:UNIT_SPELLCAST_START(event, unit, ...)
+	local spellID, _
+	if IS_WOW_8 then
+		_, spellID = ...
+	else
+		_, _, _, spellID = ...
+	end
+
 	local resType = massSpells[spellID] and "mass" or singleSpells[spellID] and "single"
 	if not resType then return end
 
 	local guid = guidFromUnit[unit]
 	if not guid then return end
-	debug(3, event, nameFromGUID[guid], "casting", spellName)
+	debug(3, event, nameFromGUID[guid], "casting", (GetSpellInfo(spellID)))
 
 	local startTime, endTime, _
 	if IS_WOW_8 then
@@ -495,14 +502,21 @@ function eventFrame:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 	end
 end
 
-function eventFrame:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
+function eventFrame:UNIT_SPELLCAST_SUCCEEDED(event, unit, ...)
+	local spellID, _
+	if IS_WOW_8 then
+		_, spellID = ...
+	else
+		_, _, _, spellID = ...
+	end
+
 	local resType = massSpells[spellID] and "mass" or singleSpells[spellID] and "single"
 	if not resType then return end
 
 	local guid = guidFromUnit[unit]
 	if not guid then return end
 
-	debug(3, event, nameFromGUID[guid], "finished", spellName)
+	debug(3, event, nameFromGUID[guid], "finished", (GetSpellInfo(spellID))
 
 	if resType == "mass" then
 		castingMass[guid] = nil
@@ -526,14 +540,21 @@ function eventFrame:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spell
 	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 end
 
-function eventFrame:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
+function eventFrame:UNIT_SPELLCAST_STOP(event, unit, ...)
+	local spellID, _
+	if IS_WOW_8 then
+		_, spellID = ...
+	else
+		_, _, _, spellID = ...
+	end
+
 	local resType = massSpells[spellID] and "mass" or singleSpells[spellID] and "single"
 	if not resType then return end
 
 	local guid = guidFromUnit[unit]
 	if not guid then return end
 
-	debug(3, event, nameFromGUID[guid], "stopped", spellName)
+	debug(3, event, nameFromGUID[guid], "stopped", (GetSpellInfo(spellID))
 
 	if resType == "mass" then
 		if not castingMass[guid] then return end -- already SUCCEEDED
