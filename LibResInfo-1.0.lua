@@ -516,7 +516,7 @@ function eventFrame:UNIT_SPELLCAST_SUCCEEDED(event, unit, ...)
 	local guid = guidFromUnit[unit]
 	if not guid then return end
 
-	debug(3, event, nameFromGUID[guid], "finished", (GetSpellInfo(spellID))
+	debug(3, event, nameFromGUID[guid], "finished", (GetSpellInfo(spellID)))
 
 	if resType == "mass" then
 		castingMass[guid] = nil
@@ -554,7 +554,7 @@ function eventFrame:UNIT_SPELLCAST_STOP(event, unit, ...)
 	local guid = guidFromUnit[unit]
 	if not guid then return end
 
-	debug(3, event, nameFromGUID[guid], "stopped", (GetSpellInfo(spellID))
+	debug(3, event, nameFromGUID[guid], "stopped", (GetSpellInfo(spellID)))
 
 	if resType == "mass" then
 		if not castingMass[guid] then return end -- already SUCCEEDED
