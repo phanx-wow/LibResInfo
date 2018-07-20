@@ -9,18 +9,16 @@
 	* Clear data when releasing spirit
 ----------------------------------------------------------------------]]
 
-local IS_WOW_8 = GetBuildInfo():match("^8")
+local DEBUG_LEVEL = GetAddOnMetadata("LibResInfo-1.0", "Version") and 1 or 0
+local DEBUG_FRAME = ChatFrame3
 
-local MAJOR, MINOR = "LibResInfo-1.0", 26
+------------------------------------------------------------------------
+
+local MAJOR, MINOR = "LibResInfo-1.0", 25
 assert(LibStub, MAJOR.." requires LibStub")
 assert(LibStub("CallbackHandler-1.0", true), MAJOR.." requires CallbackHandler-1.0")
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
-
-------------------------------------------------------------------------
-
-local DEBUG_LEVEL = GetAddOnMetadata("LibResInfo-1.0", "Version") and 1 or 0
-local DEBUG_FRAME = ChatFrame3
 
 ------------------------------------------------------------------------
 
@@ -130,28 +128,6 @@ do
 	end
 end
 
-local function UnitAuraByName(unit, searchName, filter)
-	-- Helper function to accommodate changes in WoW 8.0:
-	-- UnitAura no longer accepts an aura name, so we have to scan all auras and check their names to find the one we want
-	-- UnitAura no longer returns a spell rank (arg2)
-	for i = 1, 40 do
-		local name, rank, texture, count, debuffType, duration, expirationTime, unitCaster, canStealOrPurge, nameplateShowPersonal, spellId, canApplyAura, isBossDebuff, isCastByPlayer, nameplateShowAll, timeMod
-		if IS_WOW_8 then
-			-- rank removed, other args shifted left
-			name, texture, count, debuffType, duration, expirationTime, unitCaster, canStealOrPurge, nameplateShowPersonal, spellId, canApplyAura, isBossDebuff, isCastByPlayer, nameplateShowAll, timeMod = UnitAura(unit, i, filter)
-		else
-			name, rank, texture, count, debuffType, duration, expirationTime, unitCaster, canStealOrPurge, nameplateShowPersonal, spellId, canApplyAura, isBossDebuff, isCastByPlayer, nameplateShowAll, timeMod = UnitAura(unit, i, filter)
-		end
-
-		if not name then
-			break
-		elseif name == searchName then
-			-- rank excluded in either case
-			return name, texture, count, debuffType, duration, expirationTime, unitCaster, canStealOrPurge, nameplateShowPersonal, spellId, canApplyAura, isBossDebuff, isCastByPlayer, nameplateShowAll, timeMod
-		end
-	end
-end
-
 ------------------------------------------------------------------------
 
 lib.callbacksInUse = lib.callbacksInUse or {}
@@ -164,16 +140,16 @@ function callbacks:OnUsed(lib, callback)
 	if not next(lib.callbacksInUse) then
 		debug(1, "Callbacks in use! Starting up...")
 		eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
-		eventFrame:RegisterEvent("INCOMING_RESURRECT_CHANGED")
 		eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-		eventFrame:RegisterEvent("RESURRECT_REQUEST")
-		eventFrame:RegisterEvent("UNIT_AURA")
-		eventFrame:RegisterEvent("UNIT_CONNECTION")
-		eventFrame:RegisterEvent("UNIT_FLAGS")
+		eventFrame:RegisterEvent("INCOMING_RESURRECT_CHANGED")
 		eventFrame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
 		eventFrame:RegisterEvent("UNIT_SPELLCAST_START")
 		eventFrame:RegisterEvent("UNIT_SPELLCAST_STOP")
 		eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+		eventFrame:RegisterEvent("UNIT_AURA")
+		eventFrame:RegisterEvent("UNIT_CONNECTION")
+		eventFrame:RegisterEvent("UNIT_FLAGS")
+		eventFrame:RegisterEvent("RESURRECT_REQUEST")
 		eventFrame:GROUP_ROSTER_UPDATE("OnUsed")
 	end
 	lib.callbacksInUse[callback] = true
@@ -467,28 +443,15 @@ end
 
 ------------------------------------------------------------------------
 
-function eventFrame:UNIT_SPELLCAST_START(event, unit, ...)
-	local spellID, _
-	if IS_WOW_8 then
-		_, spellID = ...
-	else
-		_, _, _, spellID = ...
-	end
-
+function eventFrame:UNIT_SPELLCAST_START(event, unit, spellName, _, _, spellID)
 	local resType = massSpells[spellID] and "mass" or singleSpells[spellID] and "single"
 	if not resType then return end
 
 	local guid = guidFromUnit[unit]
 	if not guid then return end
-	debug(3, event, nameFromGUID[guid], "casting", (GetSpellInfo(spellID)))
+	debug(3, event, nameFromGUID[guid], "casting", spellName)
 
-	local startTime, endTime, _
-	if IS_WOW_8 then
-		_, _, _, startTime, endTime = UnitCastingInfo(unit)
-	else
-		_, _, _, _, startTime, endTime = UnitCastingInfo(unit)
-	end
-
+	local _, _, _, _, startTime, endTime = UnitCastingInfo(unit)
 	if resType == "mass" then
 		castingMass[guid] = endTime / 1000
 		debug(1, ">> MassResStarted", nameFromGUID[guid])
@@ -502,21 +465,14 @@ function eventFrame:UNIT_SPELLCAST_START(event, unit, ...)
 	end
 end
 
-function eventFrame:UNIT_SPELLCAST_SUCCEEDED(event, unit, ...)
-	local spellID, _
-	if IS_WOW_8 then
-		_, spellID = ...
-	else
-		_, _, _, spellID = ...
-	end
-
+function eventFrame:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, _, _, spellID)
 	local resType = massSpells[spellID] and "mass" or singleSpells[spellID] and "single"
 	if not resType then return end
 
 	local guid = guidFromUnit[unit]
 	if not guid then return end
 
-	debug(3, event, nameFromGUID[guid], "finished", (GetSpellInfo(spellID)))
+	debug(3, event, nameFromGUID[guid], "finished", spellName)
 
 	if resType == "mass" then
 		castingMass[guid] = nil
@@ -540,21 +496,14 @@ function eventFrame:UNIT_SPELLCAST_SUCCEEDED(event, unit, ...)
 	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 end
 
-function eventFrame:UNIT_SPELLCAST_STOP(event, unit, ...)
-	local spellID, _
-	if IS_WOW_8 then
-		_, spellID = ...
-	else
-		_, _, _, spellID = ...
-	end
-
+function eventFrame:UNIT_SPELLCAST_STOP(event, unit, spellName, _, _, spellID)
 	local resType = massSpells[spellID] and "mass" or singleSpells[spellID] and "single"
 	if not resType then return end
 
 	local guid = guidFromUnit[unit]
 	if not guid then return end
 
-	debug(3, event, nameFromGUID[guid], "stopped", (GetSpellInfo(spellID)))
+	debug(3, event, nameFromGUID[guid], "stopped", spellName)
 
 	if resType == "mass" then
 		if not castingMass[guid] then return end -- already SUCCEEDED
@@ -590,10 +539,6 @@ eventFrame.UNIT_SPELLCAST_INTERRUPTED = eventFrame.UNIT_SPELLCAST_STOP
 
 function eventFrame:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, combatEvent, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID, spellName, spellSchool)
 	if combatEvent ~= "SPELL_RESURRECT" then return end
-
-	if IS_WOW_8 then
-		timestamp, combatEvent, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID, spellName, spellSchool = CombatLogGetCurrentEventInfo()
-	end
 
 	local destUnit = unitFromGUID[destGUID]
 	if not destUnit then return end
@@ -657,7 +602,19 @@ function eventFrame:UNIT_AURA(event, unit)
 	if not guid then return end
 	--debug(5, event, unit)
 	if not isDead[guid] then
-		local stoned = UnitAuraByName(unit, SOULSTONE)
+		--local stoned = UnitAura(unit, SOULSTONE)
+		local stoned
+		local i = 0
+		while true do
+			i = i+1
+			local name = UnitAura(unit, i)
+			if not name then
+				break
+			end
+			if name == SOULSTONE then
+				stoned = true
+			end
+		end
 		if stoned ~= hasSoulstone[guid] then
 			if not stoned and UnitHealth(unit) <= 1 then
 				return
@@ -666,7 +623,19 @@ function eventFrame:UNIT_AURA(event, unit)
 			debug(2, nameFromGUID[guid], stoned and "gained" or "lost", SOULSTONE)
 		end
 	else
-		local reincarnation = UnitAuraByName(unit, REINCARNATION, "HARMFUL")
+		--local reincarnation = UnitAura(unit, REINCARNATION, nil, "HARMFUL")
+		local i = 0
+		local reincarnation
+		while true do
+			i = i+1
+			local name = UnitAura(unit, i, nil, "HARMFUL")
+			if not name then
+				break
+			end
+			if name == REINCARNATION then
+				reincarnation = name
+			end
+		end
 		if reincarnation ~= hasReincarnation[guid] then
 			local endTime = GetTime() + RELEASE_PENDING_TIME
 			hasReincarnation[guid] = reincarnation
@@ -675,7 +644,19 @@ function eventFrame:UNIT_AURA(event, unit)
 			callbacks:Fire("LibResInfo_ResPending", unit, guid, endTime, true)
 		else
 			-- Rebirth, Raise Dead, Soulstone and Eternal Guardian leaves a debuff on the resurrected target
-			local resurrecting, _, _, _, _, expires = UnitAuraByName(unit, RESURRECTING, "HARMFUL")
+			--local resurrecting, _, _, _, _, _, expires = UnitAura(unit, RESURRECTING, nil, "HARMFUL")
+			local resurrecting
+			local expires
+			while true do
+				i = i+1
+				local name, _, _, _, _, expires = UnitAura(unit, i, nil, "HARMFUL")
+				if not name then
+					break
+				end
+				if name == RESURRECTING then
+					resurrecting = name
+				end
+			end
 			if resurrecting ~= hasPending[guid] then
 				hasPending[guid] = expires
 				debug(1, ">> ResPending", nameFromGUID[guid], RESURRECTING)
@@ -795,42 +776,25 @@ end)
 
 ------------------------------------------------------------------------
 
-if GetAddOnMetadata("LibResInfo-1.0", "Version") then
-	SLASH_LIBRESINFO1 = "/lri"
-	SlashCmdList.LIBRESINFO = function(input)
-		input = tostring(input or "")
-
-		local CURRENT_CHAT_FRAME
-		for i = 1, 10 do
-			local cf = _G["ChatFrame"..i]
-			if cf and cf:IsVisible() then
-				CURRENT_CHAT_FRAME = cf
-				break
-			end
-		end
-
-		local of = DEBUG_FRAME
-		DEBUG_FRAME = CURRENT_CHAT_FRAME
-
-		if string.match(input, "^%s*[0-9]%s*$") then
-			local v = tonumber(input)
-			debug(0, "Debug level set to", input)
-			DEBUG_LEVEL = v
-			DEBUG_FRAME = of
-			return
-		end
-
+SLASH_LIBRESINFO1 = "/lri"
+SlashCmdList.LIBRESINFO = function(input)
+	input = gsub(input, "[^A-Za-z0-9]", "")
+	if strlen(input) < 1 then return end
+	if strmatch(input, "%D") then
 		local f = _G[input]
 		if type(f) == "table" and type(f.AddMessage) == "function" then
-			debug(0, "Debug frame set to", input)
 			DEBUG_FRAME = f
-			return
+			debug(0, "Debug frame set to", input)
+		else
+			debug(0, input, "is not a valid debug output frame!")
 		end
-
-		debug(0, "Version " .. MINOR .. " loaded. Usage:")
-		debug(0, NORMAL_FONT_COLOR_CODE .. "/lri " .. DEBUG_LEVEL .. "|r - change debug verbosity, valid range is 0-6")
-		debug(0, NORMAL_FONT_COLOR_CODE .. "/lri " .. of:GetName() .. "|r - change debug output frame")
-
-		DEBUG_FRAME = of
+	else
+		local v = tonumber(input)
+		if v and v >= 0 then
+			DEBUG_LEVEL = v
+			debug(0, "Debug level set to", input)
+		else
+			debug(0, input, "is not a valid debug level!")
+		end
 	end
 end
